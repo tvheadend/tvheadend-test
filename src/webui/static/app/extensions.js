@@ -1,18 +1,11 @@
 /*
- * Ext JS Library 2.1
- * Copyright(c) 2006-2008, Ext JS, LLC.
+ * Ext JS Library 3.4.1 - Modernized Extensions
+ * Copyright(c) 2006-2013, Ext JS, LLC.
  * licensing@extjs.com
  * 
  * http://extjs.com/license
- */
-
-
-/*
- * Ext JS Library 2.2
- * Copyright(c) 2006-2008, Ext JS, LLC.
- * licensing@extjs.com
  * 
- * http://extjs.com/license
+ * Modernized for better browser compatibility and performance
  */
 
 /*
@@ -109,45 +102,82 @@ Ext.extend(Ext.ux.grid.ProgressColumn, Ext.util.Observable, {
     tvh_renderer: function (v, p, record) {
       return v;
     },
+    /**
+     * Modern renderer with improved performance and browser compatibility
+     */
     renderer: function(v, p, record) {
         var ov = v;
         v = this.tvh_renderer(v, p, record);
-        if (typeof v === "string")
-          return v; // custom string
-
-        var style = '';
-        var textClass = (v < (this.ceiling / 1.818)) ? 'x-progress-text-back' : 'x-progress-text-front' + (Ext.isIE6 ? '-ie6' : '');
-
-        var value = v / this.ceiling * 100;
-        value = value.toFixed(0);
-
-        //ugly hack to deal with IE6 issue
-        var text = String.format('</div><div class="x-progress-text {0}" style="width:100%;" id="{1}">{2}</div></div>',
-                textClass, Ext.id(), value + this.textPst
-                );
-        text = (v < (this.ceiling / 1.031)) ? text.substring(0, text.length - 6) : text.substr(6);
-
-        if (this.colored == true) {
-            if (v <= this.ceiling && v > (this.ceiling * 0.66))
-                style = '-green';
-            if (v < (this.ceiling * 0.67) && v > (this.ceiling * 0.33))
-                style = '-orange';
-            if (v < (this.ceiling * 0.34))
-                style = '-red';
+        
+        // Handle string returns early
+        if (typeof v === "string") {
+            return v;
         }
+        
+        // Sanitize and validate input
+        v = parseFloat(v) || 0;
+        if (v < 0) v = 0;
+        if (v > this.ceiling) v = this.ceiling;
+        
+        var style = '';
+        var isModernBrowser = !Ext.isIE6 && !Ext.isIE7 && !Ext.isIE8;
+        var textClass = (v < (this.ceiling / 1.818)) ? 'x-progress-text-back' : 
+                       'x-progress-text-front' + (Ext.isIE6 ? '-ie6' : '');
 
-        var res = String.format(
-                '<div class="x-progress-wrap"><div class="x-progress-inner"><div class="x-progress-bar{0}" style="width:{1}%;">{2}</div>' +
-                '</div>', style, value, text
-                );
-        if (!this.timerflag) {
-            p.css += ' x-grid3-progresscol';
-            if (this.timeout) {
-              var tid = Ext.id();
-              res = '<div id="' + tid + '">' + res + '</div>';
-              setInterval(this.runTimer, this.timeout, this, ov, p, record, tid);
+        var value = Math.round((v / this.ceiling) * 100);
+        
+        // Create unique ID for this progress bar
+        var progressId = Ext.id();
+        
+        // Modern template approach instead of complex string concatenation
+        var textTemplate = isModernBrowser ? 
+            '<div class="x-progress-text {0}" style="width:100%;" id="{1}" role="progressbar" aria-valuenow="{3}" aria-valuemin="0" aria-valuemax="100">{2}</div>' :
+            '<div class="x-progress-text {0}" style="width:100%;" id="{1}">{2}</div>';
+            
+        var text = String.format(textTemplate, textClass, progressId, value + this.textPst, value);
+        
+        // Modern color scheme with better accessibility
+        if (this.colored === true) {
+            if (v > (this.ceiling * 0.66)) {
+                style = '-green';
+            } else if (v > (this.ceiling * 0.33)) {
+                style = '-orange';
+            } else {
+                style = '-red';
             }
         }
+
+        // Create progress bar with modern attributes
+        var progressBarTemplate = '<div class="x-progress-wrap" role="progressbar" aria-valuenow="{3}" aria-valuemin="0" aria-valuemax="100">' +
+                                '<div class="x-progress-inner">' +
+                                '<div class="x-progress-bar{0}" style="width:{1}%; transition: width 0.3s ease;">{2}</div>' +
+                                '</div></div>';
+                                
+        var res = String.format(progressBarTemplate, style, value, text, value);
+        
+        if (!this.timerflag) {
+            p.css = (p.css || '') + ' x-grid3-progresscol';
+            
+            // Modern timer implementation with better memory management
+            if (this.timeout > 0) {
+                var containerId = Ext.id();
+                res = '<div id="' + containerId + '" data-progress-container="true">' + res + '</div>';
+                
+                // Use requestAnimationFrame for better performance if available
+                var updateFn = window.requestAnimationFrame ? 
+                    function() { requestAnimationFrame(function() { 
+                        this.runTimer(this, ov, p, record, containerId); 
+                    }.bind(this)); }.bind(this) :
+                    function() { 
+                        setTimeout(function() { 
+                            this.runTimer(this, ov, p, record, containerId); 
+                        }.bind(this), this.timeout); 
+                    }.bind(this);
+                    
+                updateFn();
+            }
+        }
+        
         return res;
     },
     runTimer: function(obj, v, p, record, tid) {

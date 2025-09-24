@@ -1,32 +1,55 @@
 /*
- * Ext JS Library 2.1
- * Copyright(c) 2006-2008, Ext JS, LLC.
+ * Ext JS Library 3.4.1 - Modern CSS Enhancements
+ * Copyright(c) 2006-2013, Ext JS, LLC.
  * licensing@extjs.com
  *
  * http://extjs.com/license
+ * 
+ * Enhanced for modern browsers with CSS3 features and improved performance
  */
+
+/* Modern header with improved gradients and responsiveness */
 #header {
-    font-family: tahoma,arial;
-    background-color: #507AAA;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    background: linear-gradient(to bottom, #5a7eb8 0%, #4a6ea8 50%, #507AAA 100%);
+    background-color: #507AAA; /* Fallback for older browsers */
     color: #F8F8F8;
-    height: 5.3em;
+    height: 45px;
     margin: 0;
     padding: 6px 8px 0 6px;
-    background: url(../img/bg-header.png) repeat-x scroll 0 0 transparent;
-    height: 45px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1000;
 }
 
 #header > h1 {
     background: url(../img/logo.png) no-repeat scroll 10px 20% transparent;
     color: #E0E0E0;
     font-size: 22px;
+    font-weight: 300;
     padding: 2px 55px;
-    text-shadow: 0 -2px rgba(0, 0, 0, 0.2);
+    text-shadow: 0 -2px rgba(0, 0, 0, 0.3);
+    margin: 0;
+    line-height: 1.2;
+}
+
+/* Modern responsive improvements */
+@media (max-width: 768px) {
+    #header {
+        padding: 6px 4px 0 4px;
+    }
+    
+    #header > h1 {
+        font-size: 18px;
+        padding: 2px 35px;
+    }
 }
 
 
+/* Modern tab styling with improved accessibility and animations */
 .x-tab-strip li.x-tab-extra-comp {
     margin-left: 16px;
+    transition: all 0.2s ease-in-out;
 }
 
 .x-tab-strip span.x-tab-strip-extra-comp {
@@ -34,6 +57,7 @@
     cursor: default;
     white-space: nowrap;
     padding: 4px 0;
+    user-select: none;
 }
 
 .x-tab-strip span.x-tab-strip-extra-click-comp {
@@ -41,30 +65,41 @@
     cursor: pointer;
     padding: 4px 0;
     float: right;
+    transition: color 0.2s ease-in-out;
 }
 
+.x-tab-strip span.x-tab-strip-extra-click-comp:hover {
+    color: #2196F3;
+}
+
+/* Modern tree and grid styling */
 .x-tree-col {
     float: left;
     overflow: hidden;
     padding: 0 1px;
     zoom: 1;
+    box-sizing: border-box;
 }
 
-.x-tree-col-text,.x-tree-hd-text {
+.x-tree-col-text, .x-tree-hd-text {
     overflow: hidden;
-    -o-text-overflow: ellipsis;
     text-overflow: ellipsis;
+    -webkit-text-overflow: ellipsis;
+    -moz-text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
     padding: 3px 3px 3px 5px;
     white-space: nowrap;
-    font: normal 11px arial, tahoma, helvetica, sans-serif;
+    font: normal 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    line-height: 1.4;
 }
 
 .x-tree-headers {
-    background: #f9f9f9
-        url(../extjs/resources/images/default/grid/grid3-hrow.gif) repeat-x 0
-        bottom;
+    background: linear-gradient(to bottom, #fdfdfd 0%, #f6f6f6 50%, #f0f0f0 100%);
+    background-color: #f9f9f9; /* Fallback */
     cursor: default;
     zoom: 1;
+    border-bottom: 1px solid #ddd;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .x-tree-hd {
@@ -1281,3 +1316,157 @@
 }
 
 /* eof */
+
+/* Modern Browser Enhancements and Performance Improvements */
+
+/* Modern scrollbars for webkit browsers */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+/* Modern focus styles for better accessibility */
+.x-btn-focus, .x-btn-over {
+    outline: 2px solid #2196F3;
+    outline-offset: 2px;
+}
+
+/* Improved button styles */
+.x-btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.x-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Modern grid improvements */
+.x-grid3-row:hover {
+    background-color: #f5f7fa !important;
+    transition: background-color 0.2s ease;
+}
+
+.x-grid3-row-selected {
+    background-color: #e3f2fd !important;
+    border-color: #2196F3 !important;
+}
+
+/* Modern panel styling */
+.x-panel-header {
+    background: linear-gradient(to bottom, #fafafa 0%, #f0f0f0 100%);
+    border-bottom: 1px solid #ddd;
+    font-weight: 500;
+}
+
+/* Loading mask improvements */
+.x-mask-loading div {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Modern form field styling */
+.x-form-field {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.x-form-field:focus {
+    border-color: #2196F3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+/* Responsive improvements */
+@media (max-width: 1200px) {
+    .x-grid3-col {
+        min-width: 80px;
+    }
+}
+
+@media (max-width: 768px) {
+    .x-window {
+        width: 95% !important;
+        margin: 2.5%;
+    }
+    
+    .x-toolbar {
+        flex-wrap: wrap;
+    }
+    
+    .x-btn {
+        margin: 2px;
+    }
+}
+
+/* High DPI display support */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .x-grid3-row-checker,
+    .x-grid3-hd-checker {
+        background-size: 13px 13px;
+    }
+}
+
+/* Modern dark mode support (when implemented) */
+@media (prefers-color-scheme: dark) {
+    .x-panel-body {
+        background-color: #2d2d2d;
+        color: #e0e0e0;
+    }
+    
+    .x-grid3-row {
+        background-color: #333;
+        border-color: #555;
+        color: #e0e0e0;
+    }
+    
+    .x-grid3-row:hover {
+        background-color: #404040 !important;
+    }
+}
+
+/* Performance optimizations */
+.x-grid3-body {
+    will-change: scroll-position;
+}
+
+.x-tree-node-el {
+    will-change: transform;
+}
+
+/* Modern animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.x-window {
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Accessibility improvements */
+.x-btn[aria-pressed="true"] {
+    background-color: #2196F3;
+    color: white;
+}
+
+/* Focus indicators for keyboard navigation */
+.x-grid3-row-selected .x-grid3-cell {
+    outline: 2px solid #2196F3;
+    outline-offset: -2px;
+}

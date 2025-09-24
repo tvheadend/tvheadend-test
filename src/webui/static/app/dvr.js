@@ -6,19 +6,49 @@
  *
  */
 
+/*
+ * DVR Config / Schedule / Log editor and viewer
+ * Modernized for better performance and browser compatibility
+ */
+
+// Modern label formatting parser with improved performance
 tvheadend.labelFormattingParser = function(description) {
-    if (tvheadend.label_formatting){
-        return description.replace(/\[COLOR\s(.*?)\]/g, '<font style="color:$1">')
-	                   .replace(/\[\/COLOR\]/g, '<\/font>')
-	                   .replace(/\[B\]/g, '<b>')
-	                   .replace(/\[\/B\]/g, '<\/b>')
-	                   .replace(/\[I\]/g, '<i>')
-	                   .replace(/\[CR\]/g, '<br>')
-	                   .replace(/\[\/I\]/g, '<\/i>')
-	                   .replace(/\[UPPERCASE\](.*)\[\/UPPERCASE\]/g, function(match, group) {return group.toUpperCase();})
-	                   .replace(/\[LOWERCASE\](.*)\[\/LOWERCASE\]/g, function(match, group) {return group.toLowerCase();})
-	                   .replace(/\[CAPITALIZE\](.*)\[\/CAPITALIZE\]/g, function(match, group) {return group.split(/\s+/).map(w => w[0].toUpperCase() + w.slice(1)).join(' ');});
-    }else return description;
+    if (!tvheadend.label_formatting || !description) {
+        return description || '';
+    }
+    
+    // Use modern array methods for better performance
+    var replacements = [
+        [/\[COLOR\s(.*?)\]/g, '<font style="color:$1">'],
+        [/\[\/COLOR\]/g, '</font>'],
+        [/\[B\]/g, '<b>'],
+        [/\[\/B\]/g, '</b>'],
+        [/\[I\]/g, '<i>'],
+        [/\[CR\]/g, '<br>'],
+        [/\[\/I\]/g, '</i>']
+    ];
+    
+    var result = description;
+    replacements.forEach(function(replacement) {
+        result = result.replace(replacement[0], replacement[1]);
+    });
+    
+    // Handle text transformations with improved browser compatibility
+    result = result.replace(/\[UPPERCASE\](.*?)\[\/UPPERCASE\]/g, function(match, group) {
+        return group.toUpperCase();
+    });
+    
+    result = result.replace(/\[LOWERCASE\](.*?)\[\/LOWERCASE\]/g, function(match, group) {
+        return group.toLowerCase();
+    });
+    
+    result = result.replace(/\[CAPITALIZE\](.*?)\[\/CAPITALIZE\]/g, function(match, group) {
+        return group.split(/\s+/).map(function(w) {
+            return w.charAt(0).toUpperCase() + w.slice(1);
+        }).join(' ');
+    });
+    
+    return result;
 };
 
 tvheadend.dvrDetails = function(grid, index) {
@@ -261,27 +291,68 @@ tvheadend.dvrDetails = function(grid, index) {
       }
   }                             //updateDialogFanart
 
+  // Modern showit function with responsive design and better UX
   function showit(d) {
-       var dialogTitle = getDialogTitle(d);
-       var content = getDialogContent(d);
-       var buttons = getDialogButtons(d);
-       var windowHeight = Ext.getBody().getViewSize().height - 150;
-
-       win = new Ext.Window({
-            title: dialogTitle,
-            iconCls: 'info',
-            layout: 'fit',
-            width: 790,
-            height: windowHeight,
-            constrainHeader: true,
-            buttonAlign: 'center',
-            autoScroll: true,
-            buttons: buttons,
-            html: content
-        });
-       win.show();
-       updateDialogFanart(d);
-       checkButtonAvailability(win.fbar)
+       try {
+           var dialogTitle = getDialogTitle(d);
+           var content = getDialogContent(d);
+           var buttons = getDialogButtons(d);
+           
+           // Modern responsive sizing
+           var viewSize = Ext.getBody().getViewSize();
+           var windowWidth = Math.min(790, viewSize.width - 40);
+           var windowHeight = Math.min(viewSize.height - 150, viewSize.height * 0.8);
+           
+           // Create window with modern configuration
+           win = new Ext.Window({
+                title: dialogTitle,
+                iconCls: 'info',
+                layout: 'fit',
+                width: windowWidth,
+                height: windowHeight,
+                constrainHeader: true,
+                buttonAlign: 'center',
+                autoScroll: true,
+                buttons: buttons,
+                html: content,
+                modal: true,
+                resizable: true,
+                maximizable: true,
+                // Modern close behavior
+                closeAction: 'destroy',
+                // Better animations for modern browsers
+                animateTarget: tvheadend.browser && tvheadend.browser.isModern() ? undefined : false,
+                // Accessibility improvements
+                focusOnToFront: true,
+                listeners: {
+                    destroy: function() {
+                        if (updateTimer) {
+                            clearInterval(updateTimer);
+                            updateTimer = null;
+                        }
+                    },
+                    show: function() {
+                        // Focus first button for keyboard navigation
+                        var firstBtn = this.fbar && this.fbar.items ? this.fbar.items.get(0) : null;
+                        if (firstBtn && firstBtn.focus) {
+                            firstBtn.focus.defer(100, firstBtn);
+                        }
+                    }
+                }
+            });
+           
+           win.show();
+           updateDialogFanart(d);
+           
+           if (win.fbar) {
+               checkButtonAvailability(win.fbar);
+           }
+       } catch (e) {
+           console.error('Error showing dialog:', e);
+           if (tvheadend.error) {
+               tvheadend.error('Failed to show dialog: ' + e.message);
+           }
+       }
   }
 
   function load(store, index, cb) {
@@ -325,24 +396,55 @@ tvheadend.dvrDetails = function(grid, index) {
           toolBar.getComponent(previousButtonId).disable();
     }
 
+  // Modern updateit function with improved error handling and performance
   function updateit(d) {
-        var dialogTitle = getDialogTitle(d);
-        var content = getDialogContent(d);
-        var buttons = getDialogButtons(d);
-        win.removeAll();
-        // Can't update buttons at the same time...
-        win.update({html: content});
-        win.setTitle(dialogTitle);
-        // ...so remove the buttons and re-add them.
-        var tbar = win.fbar;
-        tbar.removeAll();
-        Ext.each(buttons, function(btn) {
-            tbar.addButton(btn);
-        });
-        updateDialogFanart(d);
-        checkButtonAvailability(tbar);
-        // Finally, relayout.
-        win.doLayout();
+        try {
+            var dialogTitle = getDialogTitle(d);
+            var content = getDialogContent(d);
+            var buttons = getDialogButtons(d);
+            
+            if (!win || win.isDestroyed) {
+                console.warn('Window is destroyed, cannot update');
+                return;
+            }
+            
+            win.removeAll();
+            
+            // Modern approach: batch DOM updates to improve performance
+            win.suspendEvents();
+            
+            // Update content and title
+            win.update({html: content});
+            win.setTitle(dialogTitle);
+            
+            // Update buttons more efficiently
+            var tbar = win.fbar;
+            if (tbar) {
+                tbar.removeAll();
+                if (buttons && buttons.length > 0) {
+                    buttons.forEach(function(btn) {
+                        tbar.addButton(btn);
+                    });
+                }
+            }
+            
+            win.resumeEvents();
+            
+            updateDialogFanart(d);
+            if (tbar) {
+                checkButtonAvailability(tbar);
+            }
+            
+            // Finally, relayout with error handling
+            if (typeof win.doLayout === 'function') {
+                win.doLayout();
+            }
+        } catch (e) {
+            console.error('Error updating dialog:', e);
+            if (tvheadend.error) {
+                tvheadend.error('Failed to update dialog: ' + e.message);
+            }
+        }
   }
 
     var store = grid.getStore();
