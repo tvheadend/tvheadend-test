@@ -38,6 +38,7 @@ import {
   TagOption,
   SelectOption
 } from '../utils/api';
+import WatchTVDialog from './dialogs/WatchTVDialog';
 
 interface EPGEvent {
   eventId: string;
@@ -89,6 +90,7 @@ function EPG() {
 
   // Dialog states
   const [selectedEvent, setSelectedEvent] = useState<EPGEvent | null>(null);
+  const [watchTVDialogOpen, setWatchTVDialogOpen] = useState(false);
 
   // Data states
   const [channels, setChannels] = useState<ChannelOption[]>([]);
@@ -171,10 +173,11 @@ function EPG() {
     setPage(0);
   };
 
-  const handleWatchTV = (event: EPGEvent) => {
-    setSelectedEvent(event);
-    // Dialog would open here
-    console.log('Watch TV:', event.title);
+  const handleWatchTV = (event?: EPGEvent) => {
+    if (event) {
+      setSelectedEvent(event);
+    }
+    setWatchTVDialogOpen(true);
   };
 
   const handleCreateAutoRec = (event: EPGEvent) => {
@@ -354,8 +357,7 @@ function EPG() {
             startIcon={<TvIcon />}
             variant="outlined"
             size="small"
-            disabled={!selectedEvent}
-            onClick={() => selectedEvent && handleWatchTV(selectedEvent)}
+            onClick={() => handleWatchTV(selectedEvent || undefined)}
           >
             Watch TV
           </Button>
@@ -522,6 +524,14 @@ function EPG() {
           </Box>
         )}
       </Paper>
+
+      {/* Watch TV Dialog */}
+      <WatchTVDialog
+        open={watchTVDialogOpen}
+        onClose={() => setWatchTVDialogOpen(false)}
+        channelUuid={selectedEvent?.channelUuid}
+        title={selectedEvent?.title}
+      />
     </Box>
   );
 }
