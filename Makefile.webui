@@ -321,7 +321,8 @@ src/webui/static/intl/tvh.%.js.gz: intl/js/tvheadend.js.%.po
 compile-modern:
 	@echo "Building modern React interface..."
 	@if [ -d "$(WEBDIR)/modern" ]; then \
-		cd $(WEBDIR)/modern && npm run build; \
+		cd $(WEBDIR)/modern && npm install && npm run build; \
+		mkdir -p ../static/modern; \
 		cp -r build/* ../static/modern/; \
 	fi
 	@echo "Modern interface build completed"

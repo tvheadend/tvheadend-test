@@ -207,6 +207,16 @@ function DVR() {
     }
   };
 
+  const handleAddRecording = () => {
+    // Open recording creation dialog
+    console.log('Add recording clicked');
+  };
+
+  const handleHelp = () => {
+    // Open help dialog
+    console.log('Help clicked');
+  };
+
   const currentTabData = tabs[currentTab];
   const filteredRecordings = recordings.filter(recording => 
     currentTabData.status.length === 0 || currentTabData.status.includes(recording.status)
@@ -236,29 +246,36 @@ function DVR() {
       {/* Toolbar */}
       <Paper sx={{ mb: 2 }}>
         <Toolbar sx={{ flexWrap: 'wrap', gap: 1 }}>
-          {/* Main Action Buttons */}
-          <Button
-            startIcon={<SaveIcon />}
-            variant="outlined"
-            size="small"
-            disabled={selectedRecordings.length === 0}
-          >
-            Save
-          </Button>
-          <Button
-            startIcon={<UndoIcon />}
-            variant="outlined"
-            size="small"
-          >
-            Undo
-          </Button>
-          <Button
-            startIcon={<AddIcon />}
-            variant="contained"
-            size="small"
-          >
-            Add
-          </Button>
+          {/* Main Action Buttons - Only show for upcoming/current recordings, autorecs, and timers */}
+          {(currentTab === 0 || currentTab === 3 || currentTab === 4) && (
+            <>
+              <Button
+                startIcon={<SaveIcon />}
+                variant="outlined"
+                size="small"
+                disabled={selectedRecordings.length === 0}
+              >
+                Save
+              </Button>
+              <Button
+                startIcon={<UndoIcon />}
+                variant="outlined"
+                size="small"
+              >
+                Undo
+              </Button>
+              <Button
+                startIcon={<AddIcon />}
+                variant="contained"
+                size="small"
+                onClick={handleAddRecording}
+              >
+                Add
+              </Button>
+            </>
+          )}
+          
+          {/* Delete, Edit, Stop, Abort - Show for all tabs */}
           <Button
             startIcon={<DeleteIcon />}
             variant="outlined"
@@ -276,24 +293,30 @@ function DVR() {
           >
             Edit
           </Button>
-          <Button
-            startIcon={<StopIcon />}
-            variant="outlined"
-            size="small"
-            disabled={selectedRecordings.length === 0}
-            color="warning"
-          >
-            Stop
-          </Button>
-          <Button
-            startIcon={<CancelIcon />}
-            variant="outlined"
-            size="small"
-            disabled={selectedRecordings.length === 0}
-            color="error"
-          >
-            Abort
-          </Button>
+          
+          {/* Stop and Abort - Only for upcoming/current recordings */}
+          {currentTab === 0 && (
+            <>
+              <Button
+                startIcon={<StopIcon />}
+                variant="outlined"
+                size="small"
+                disabled={selectedRecordings.length === 0}
+                color="warning"
+              >
+                Stop
+              </Button>
+              <Button
+                startIcon={<CancelIcon />}
+                variant="outlined"
+                size="small"
+                disabled={selectedRecordings.length === 0}
+                color="error"
+              >
+                Abort
+              </Button>
+            </>
+          )}
 
           {/* Secondary Action Buttons */}
           <Button
@@ -333,6 +356,7 @@ function DVR() {
             startIcon={<HelpIcon />}
             variant="outlined"
             size="small"
+            onClick={handleHelp}
           >
             Help
           </Button>

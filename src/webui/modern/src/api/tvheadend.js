@@ -51,7 +51,14 @@ class TvheadendAPI {
 
   // Configuration APIs
   async getConfig() {
-    return this.request('config');
+    return this.request('config/load');
+  }
+
+  async loadConfig(params = {}) {
+    return this.request('config/load', {
+      method: 'POST',
+      body: params,
+    });
   }
 
   async saveConfig(config) {

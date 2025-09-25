@@ -89,7 +89,7 @@ function Configuration() {
   const [parseHbbTV, setParseHbbTV] = useState(false);
   
   // Language selection states
-  const [selectedLanguages, setSelectedLanguages] = useState<LanguageItem[]>([]);
+  const [selectedLanguages] = useState<LanguageItem[]>([]);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
   const [wizardLanguage, setWizardLanguage] = useState('');
@@ -97,73 +97,31 @@ function Configuration() {
   const [epgLang2, setEpgLang2] = useState('');
   const [epgLang3, setEpgLang3] = useState('');
 
-  const languages = [
-    { code: 'en', name: 'English' },
-    { code: 'de', name: 'German' },
-    { code: 'fr', name: 'French' },
-    { code: 'es', name: 'Spanish' },
-    { code: 'it', name: 'Italian' },
-    { code: 'pt', name: 'Portuguese' },
-    { code: 'ru', name: 'Russian' },
-    { code: 'zh', name: 'Chinese' },
-    { code: 'ja', name: 'Japanese' },
-    { code: 'ko', name: 'Korean' },
-    { code: 'ar', name: 'Arabic' },
-    { code: 'hi', name: 'Hindi' },
-    { code: 'nl', name: 'Dutch' },
-    { code: 'sv', name: 'Swedish' },
-    { code: 'no', name: 'Norwegian' },
-    { code: 'da', name: 'Danish' },
-    { code: 'fi', name: 'Finnish' },
-    { code: 'pl', name: 'Polish' },
-    { code: 'cs', name: 'Czech' },
-    { code: 'hu', name: 'Hungarian' },
-    { code: 'ro', name: 'Romanian' },
-    { code: 'bg', name: 'Bulgarian' },
-    { code: 'hr', name: 'Croatian' },
-    { code: 'sk', name: 'Slovak' },
-    { code: 'sl', name: 'Slovenian' },
-    { code: 'et', name: 'Estonian' },
-    { code: 'lv', name: 'Latvian' },
-    { code: 'lt', name: 'Lithuanian' },
-    { code: 'el', name: 'Greek' },
-    { code: 'tr', name: 'Turkish' },
-    { code: 'he', name: 'Hebrew' },
-    { code: 'th', name: 'Thai' },
-    { code: 'vi', name: 'Vietnamese' },
-    { code: 'id', name: 'Indonesian' },
-    { code: 'ms', name: 'Malay' },
-    { code: 'tl', name: 'Filipino' },
-    { code: 'bn', name: 'Bengali' },
-    { code: 'ur', name: 'Urdu' },
-    { code: 'fa', name: 'Persian' },
-    { code: 'sw', name: 'Swahili' },
-    { code: 'af', name: 'Afrikaans' },
-    { code: 'sq', name: 'Albanian' },
-    { code: 'am', name: 'Amharic' },
-    { code: 'hy', name: 'Armenian' },
-    { code: 'az', name: 'Azerbaijani' },
-    { code: 'eu', name: 'Basque' },
-    { code: 'be', name: 'Belarusian' },
-    { code: 'bs', name: 'Bosnian' },
-    { code: 'ca', name: 'Catalan' },
-    { code: 'cy', name: 'Welsh' },
-    { code: 'ga', name: 'Irish' },
-    { code: 'gl', name: 'Galician' },
-    { code: 'is', name: 'Icelandic' },
-    { code: 'ka', name: 'Georgian' },
-    { code: 'kk', name: 'Kazakh' },
-    { code: 'ky', name: 'Kyrgyz' },
-    { code: 'lb', name: 'Luxembourgish' },
-    { code: 'mk', name: 'Macedonian' },
-    { code: 'mt', name: 'Maltese' },
-    { code: 'mn', name: 'Mongolian' },
-    { code: 'sr', name: 'Serbian' },
-    { code: 'tg', name: 'Tajik' },
-    { code: 'tk', name: 'Turkmen' },
-    { code: 'uk', name: 'Ukrainian' },
-    { code: 'uz', name: 'Uzbek' },
-  ];
+  const [languages, setLanguages] = useState<LanguageItem[]>([]);
+
+  // Load real languages from API
+  const loadLanguages = async () => {
+    try {
+      const response = await fetch('/api/language/list');
+      const data = await response.json();
+      if (data.entries) {
+        const languageList = data.entries.map((lang: any) => ({
+          code: lang.identifier || lang.key || lang.id,
+          name: lang.val || lang.name || lang.identifier,
+        }));
+        setLanguages(languageList);
+      }
+    } catch (error) {
+      console.error('Failed to load languages:', error);
+      // Fallback to basic languages if API fails
+      setLanguages([
+        { code: 'en', name: 'English' },
+        { code: 'de', name: 'German' },
+        { code: 'fr', name: 'French' },
+        { code: 'es', name: 'Spanish' },
+      ]);
+    }
+  };
 
   const configSections: ConfigSection[] = [
     {
@@ -244,6 +202,7 @@ function Configuration() {
   useEffect(() => {
     loadServerInfo();
     loadConfiguration();
+    loadLanguages();
   }, []);
 
   const loadServerInfo = async () => {
@@ -260,7 +219,13 @@ function Configuration() {
 
   const loadConfiguration = async () => {
     try {
-      const response = await fetch('/api/config');
+      const response = await fetch('/api/config/load', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ meta: 1 }),
+      });
       const data = await response.json();
       
       if (data.entries && data.entries.length > 0) {
