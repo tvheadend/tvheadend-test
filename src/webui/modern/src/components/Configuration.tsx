@@ -53,6 +53,12 @@ import {
   LanguageOption
 } from '../utils/api';
 import AccessEntriesSection from './sections/AccessEntriesSection';
+import PasswordsSection from './sections/PasswordsSection';
+import IPBlockingSection from './sections/IPBlockingSection';
+// import BaseConfigSection from './sections/BaseConfigSection';
+// import NetworksSection from './sections/NetworksSection';  
+// import ChannelsSection from './sections/ChannelsSection';
+// import ChannelTagsSection from './sections/ChannelTagsSection';
 
 interface ConfigSection {
   id: string;
@@ -541,23 +547,9 @@ function Configuration() {
           case 'access-entries':
             return <AccessEntriesSection />;
           case 'passwords':
-            return (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>Passwords</Typography>
-                  <Typography variant="body2">Password management functionality will be implemented here.</Typography>
-                </CardContent>
-              </Card>
-            );
+            return <PasswordsSection />;
           case 'ip-blocking':
-            return (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>IP Blocking Records</Typography>
-                  <Typography variant="body2">IP blocking functionality will be implemented here.</Typography>
-                </CardContent>
-              </Card>
-            );
+            return <IPBlockingSection />;
           default:
             return <AccessEntriesSection />;
         }
