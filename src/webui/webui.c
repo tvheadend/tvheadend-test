@@ -26,6 +26,7 @@
 #include "tcp.h"
 #include "udp_stream.h"
 #include "webui.h"
+#include "modern_ui.h"
 #include "htsmsg_json.h"
 #include "dvr/dvr.h"
 #include "filebundle.h"
@@ -109,7 +110,7 @@ page_root(http_connection_t *hc, const char *remain, void *opaque)
   if(is_client_simple(hc)) {
     http_redirect(hc, "simple.html", &hc->hc_req_args, 0);
   } else {
-    http_redirect(hc, "extjs.html", &hc->hc_req_args, 0);
+    http_redirect(hc, "modern.html", &hc->hc_req_args, 0);
   }
   return 0;
 }
@@ -2745,6 +2746,7 @@ webui_init(int xspf)
 
   simpleui_start();
   extjs_start();
+  modern_ui_start();
   comet_init();
   webui_api_init();
 }
