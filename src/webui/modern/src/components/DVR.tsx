@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -105,9 +105,57 @@ function DVR() {
     { key: 'genre', label: 'Genre' },
   ];
 
+  const loadRecordings = useCallback(() => {
+    setLoading(true);
+    
+    // Build query parameters for DVR API
+    const params = new URLSearchParams({
+      start: ((page - 1) * itemsPerPage).toString(),
+      limit: itemsPerPage.toString()
+    });
+    
+    let endpoint = '/api/dvr/entry/grid_upcoming';
+    if (currentTab === 1) endpoint = '/api/dvr/entry/grid_finished';
+    if (currentTab === 2) endpoint = '/api/dvr/entry/grid_failed';
+    if (currentTab === 3) endpoint = '/api/dvr/autorec/grid';
+    if (currentTab === 4) endpoint = '/api/dvr/timerec/grid';
+    
+    fetch(`${endpoint}?${params}`)
+      .then(res => res.json())
+      .then(data => {
+        const mappedRecordings: Recording[] = (data.entries || []).map((entry: any) => ({
+          id: entry.uuid,
+          title: entry.disp_title || entry.title || '',
+          extraText: entry.disp_subtitle || entry.subtitle || '',
+          channel: entry.channelname || '',
+          scheduledStart: entry.start_real ? new Date(entry.start_real * 1000).toLocaleString() : '',
+          scheduledStop: entry.stop_real ? new Date(entry.stop_real * 1000).toLocaleString() : '',
+          duration: entry.duration || 0,
+          fileSize: entry.filesize ? `${Math.round(entry.filesize / 1024 / 1024)} MB` : '',
+          comment: entry.comment || '',
+          genre: entry.genre ? entry.genre.join(', ') : '',
+          enabled: entry.enabled !== false,
+          status: entry.sched_status === 'recording' ? 'recording' :
+                  entry.sched_status === 'scheduled' ? 'upcoming' :
+                  entry.sched_status === 'completed' ? 'completed' :
+                  entry.sched_status === 'missed' ? 'failed' : 'upcoming'
+        }));
+        
+        setRecordings(mappedRecordings);
+        setTotalPages(Math.ceil((data.totalCount || 0) / itemsPerPage));
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch recordings:', err);
+        setRecordings([]);
+        setTotalPages(1);
+        setLoading(false);
+      });
+  }, [currentTab, page, itemsPerPage]);
+
   useEffect(() => {
     loadRecordings();
-  }, [currentTab, page, itemsPerPage]);
+  }, [loadRecordings]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -117,19 +165,7 @@ function DVR() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [autoRefresh, currentTab, page, itemsPerPage]);
-
-  const loadRecordings = () => {
-    setLoading(true);
-    // Simulate API call - in real implementation, this would call the actual DVR API
-    setTimeout(() => {
-      // Mock data for demonstration
-      const mockRecordings: Recording[] = [];
-      setRecordings(mockRecordings);
-      setTotalPages(1);
-      setLoading(false);
-    }, 500);
-  };
+  }, [autoRefresh, loadRecordings]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);

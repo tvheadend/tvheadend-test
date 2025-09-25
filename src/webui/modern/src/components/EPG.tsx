@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -79,21 +79,73 @@ function EPG() {
     { key: 'contentType', label: 'Content Type', sortable: true },
   ];
 
+  const loadEvents = useCallback(() => {
+    setLoading(true);
+    
+    // Build query parameters for EPG API
+    const params = new URLSearchParams({
+      start: '0',
+      limit: '50',
+      sort: orderBy,
+      dir: order
+    });
+    
+    if (channelFilter !== 'All') {
+      params.append('channel', channelFilter);
+    }
+    if (searchTitle) {
+      params.append('title', searchTitle);
+    }
+    if (fulltext) {
+      params.append('fulltext', '1');
+    }
+    if (newOnly) {
+      params.append('mode', 'now');
+    }
+    if (tagFilter) {
+      params.append('tag', tagFilter);
+    }
+    if (contentTypeFilter) {
+      params.append('contenttype', contentTypeFilter);
+    }
+    if (durationFilter) {
+      params.append('duration', durationFilter);
+    }
+    
+    fetch(`/api/epg/events/grid?${params}`)
+      .then(res => res.json())
+      .then(data => {
+        const mappedEvents: EPGEvent[] = (data.entries || []).map((entry: any) => ({
+          id: entry.eventId || entry.uuid,
+          title: entry.title || '',
+          extraText: entry.subtitle || '',
+          episode: entry.episodeUri || '',
+          startTime: new Date(entry.start * 1000).toLocaleString(),
+          duration: Math.floor((entry.stop - entry.start) / 60),
+          channelNumber: entry.channelNumber || 0,
+          channel: entry.channelName || '',
+          stars: entry.stars || 0,
+          rating: entry.rating || '',
+          age: entry.age || '',
+          contentType: entry.contentType || '',
+          progress: 0 // Calculate progress based on current time
+        }));
+        
+        setEvents(mappedEvents);
+        setTotalPages(Math.ceil((data.totalCount || 0) / 50));
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch EPG events:', err);
+        setEvents([]);
+        setTotalPages(1);
+        setLoading(false);
+      });
+  }, [channelFilter, searchTitle, fulltext, newOnly, tagFilter, contentTypeFilter, durationFilter, orderBy, order]);
+
   useEffect(() => {
     loadEvents();
-  }, [page, channelFilter, searchTitle, fulltext, newOnly, tagFilter, contentTypeFilter, durationFilter, orderBy, order]);
-
-  const loadEvents = () => {
-    setLoading(true);
-    // Simulate API call - in real implementation, this would call the actual EPG API
-    setTimeout(() => {
-      // Mock data for demonstration
-      const mockEvents: EPGEvent[] = [];
-      setEvents(mockEvents);
-      setTotalPages(1);
-      setLoading(false);
-    }, 500);
-  };
+  }, [loadEvents]);
 
   const handleSort = (property: keyof EPGEvent) => {
     const isAsc = orderBy === property && order === 'asc';
