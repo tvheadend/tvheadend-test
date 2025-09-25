@@ -77,9 +77,16 @@ function AppContent() {
   const drawer = (
     <div>
       <Toolbar>
-        <Typography variant="h6" noWrap component="div">
-          Tvheadend
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <img 
+            src="/static/img/logo.png" 
+            alt="Tvheadend" 
+            style={{ width: 24, height: 24 }}
+          />
+          <Typography variant="h6" noWrap component="div">
+            Tvheadend
+          </Typography>
+        </Box>
       </Toolbar>
       <List>
         {menuItems.map((item) => (

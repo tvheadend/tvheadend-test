@@ -19,7 +19,6 @@ import {
   Card,
   CardContent,
   FormGroup,
-  FormLabel,
   Toolbar,
   Dialog,
   DialogTitle,
@@ -36,7 +35,6 @@ import {
   Settings as SettingsIcon,
   Group as GroupIcon,
   Tv as TvIcon,
-  SwapVert as SwapIcon,
   ExpandLess,
   ExpandMore,
   Storage as StorageIcon,
@@ -64,6 +62,7 @@ interface ServerInfo {
   version: string;
   api_version: number;
   capabilities: string[];
+  uuid?: string;
 }
 
 function Configuration() {
@@ -90,7 +89,6 @@ function Configuration() {
   const [parseHbbTV, setParseHbbTV] = useState(false);
   
   // Language selection states
-  const [availableLanguages, setAvailableLanguages] = useState<LanguageItem[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<LanguageItem[]>([]);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
@@ -98,6 +96,74 @@ function Configuration() {
   const [epgLang1, setEpgLang1] = useState('');
   const [epgLang2, setEpgLang2] = useState('');
   const [epgLang3, setEpgLang3] = useState('');
+
+  const languages = [
+    { code: 'en', name: 'English' },
+    { code: 'de', name: 'German' },
+    { code: 'fr', name: 'French' },
+    { code: 'es', name: 'Spanish' },
+    { code: 'it', name: 'Italian' },
+    { code: 'pt', name: 'Portuguese' },
+    { code: 'ru', name: 'Russian' },
+    { code: 'zh', name: 'Chinese' },
+    { code: 'ja', name: 'Japanese' },
+    { code: 'ko', name: 'Korean' },
+    { code: 'ar', name: 'Arabic' },
+    { code: 'hi', name: 'Hindi' },
+    { code: 'nl', name: 'Dutch' },
+    { code: 'sv', name: 'Swedish' },
+    { code: 'no', name: 'Norwegian' },
+    { code: 'da', name: 'Danish' },
+    { code: 'fi', name: 'Finnish' },
+    { code: 'pl', name: 'Polish' },
+    { code: 'cs', name: 'Czech' },
+    { code: 'hu', name: 'Hungarian' },
+    { code: 'ro', name: 'Romanian' },
+    { code: 'bg', name: 'Bulgarian' },
+    { code: 'hr', name: 'Croatian' },
+    { code: 'sk', name: 'Slovak' },
+    { code: 'sl', name: 'Slovenian' },
+    { code: 'et', name: 'Estonian' },
+    { code: 'lv', name: 'Latvian' },
+    { code: 'lt', name: 'Lithuanian' },
+    { code: 'el', name: 'Greek' },
+    { code: 'tr', name: 'Turkish' },
+    { code: 'he', name: 'Hebrew' },
+    { code: 'th', name: 'Thai' },
+    { code: 'vi', name: 'Vietnamese' },
+    { code: 'id', name: 'Indonesian' },
+    { code: 'ms', name: 'Malay' },
+    { code: 'tl', name: 'Filipino' },
+    { code: 'bn', name: 'Bengali' },
+    { code: 'ur', name: 'Urdu' },
+    { code: 'fa', name: 'Persian' },
+    { code: 'sw', name: 'Swahili' },
+    { code: 'af', name: 'Afrikaans' },
+    { code: 'sq', name: 'Albanian' },
+    { code: 'am', name: 'Amharic' },
+    { code: 'hy', name: 'Armenian' },
+    { code: 'az', name: 'Azerbaijani' },
+    { code: 'eu', name: 'Basque' },
+    { code: 'be', name: 'Belarusian' },
+    { code: 'bs', name: 'Bosnian' },
+    { code: 'ca', name: 'Catalan' },
+    { code: 'cy', name: 'Welsh' },
+    { code: 'ga', name: 'Irish' },
+    { code: 'gl', name: 'Galician' },
+    { code: 'is', name: 'Icelandic' },
+    { code: 'ka', name: 'Georgian' },
+    { code: 'kk', name: 'Kazakh' },
+    { code: 'ky', name: 'Kyrgyz' },
+    { code: 'lb', name: 'Luxembourgish' },
+    { code: 'mk', name: 'Macedonian' },
+    { code: 'mt', name: 'Maltese' },
+    { code: 'mn', name: 'Mongolian' },
+    { code: 'sr', name: 'Serbian' },
+    { code: 'tg', name: 'Tajik' },
+    { code: 'tk', name: 'Turkmen' },
+    { code: 'uk', name: 'Ukrainian' },
+    { code: 'uz', name: 'Uzbek' },
+  ];
 
   const configSections: ConfigSection[] = [
     {
@@ -175,192 +241,9 @@ function Configuration() {
     }
   ];
 
-  const languages = [
-    { code: 'en', name: 'English' },
-    { code: 'de', name: 'German' },
-    { code: 'fr', name: 'French' },
-    { code: 'es', name: 'Spanish' },
-    { code: 'it', name: 'Italian' },
-    { code: 'pt', name: 'Portuguese' },
-    { code: 'ru', name: 'Russian' },
-    { code: 'zh', name: 'Chinese' },
-    { code: 'ja', name: 'Japanese' },
-    { code: 'ko', name: 'Korean' },
-    { code: 'ar', name: 'Arabic' },
-    { code: 'hi', name: 'Hindi' },
-    { code: 'nl', name: 'Dutch' },
-    { code: 'sv', name: 'Swedish' },
-    { code: 'no', name: 'Norwegian' },
-    { code: 'da', name: 'Danish' },
-    { code: 'fi', name: 'Finnish' },
-    { code: 'pl', name: 'Polish' },
-    { code: 'cs', name: 'Czech' },
-    { code: 'hu', name: 'Hungarian' },
-    { code: 'ro', name: 'Romanian' },
-    { code: 'bg', name: 'Bulgarian' },
-    { code: 'hr', name: 'Croatian' },
-    { code: 'sk', name: 'Slovak' },
-    { code: 'sl', name: 'Slovenian' },
-    { code: 'et', name: 'Estonian' },
-    { code: 'lv', name: 'Latvian' },
-    { code: 'lt', name: 'Lithuanian' },
-    { code: 'el', name: 'Greek' },
-    { code: 'tr', name: 'Turkish' },
-    { code: 'he', name: 'Hebrew' },
-    { code: 'th', name: 'Thai' },
-    { code: 'vi', name: 'Vietnamese' },
-    { code: 'id', name: 'Indonesian' },
-    { code: 'ms', name: 'Malay' },
-    { code: 'tl', name: 'Filipino' },
-    { code: 'bn', name: 'Bengali' },
-    { code: 'ur', name: 'Urdu' },
-    { code: 'fa', name: 'Persian' },
-    { code: 'sw', name: 'Swahili' },
-    { code: 'ab', name: 'Abkhazian' },
-    { code: 'aa', name: 'Afar' },
-    { code: 'af', name: 'Afrikaans' },
-    { code: 'ak', name: 'Akan' },
-    { code: 'sq', name: 'Albanian' },
-    { code: 'am', name: 'Amharic' },
-    { code: 'an', name: 'Aragonese' },
-    { code: 'hy', name: 'Armenian' },
-    { code: 'as', name: 'Assamese' },
-    { code: 'av', name: 'Avaric' },
-    { code: 'ae', name: 'Avestan' },
-    { code: 'ay', name: 'Aymara' },
-    { code: 'az', name: 'Azerbaijani' },
-    { code: 'bm', name: 'Bambara' },
-    { code: 'ba', name: 'Bashkir' },
-    { code: 'eu', name: 'Basque' },
-    { code: 'be', name: 'Belarusian' },
-    { code: 'bh', name: 'Bihari' },
-    { code: 'bi', name: 'Bislama' },
-    { code: 'bs', name: 'Bosnian' },
-    { code: 'br', name: 'Breton' },
-    { code: 'my', name: 'Burmese' },
-    { code: 'ca', name: 'Catalan' },
-    { code: 'ch', name: 'Chamorro' },
-    { code: 'ce', name: 'Chechen' },
-    { code: 'ny', name: 'Chichewa' },
-    { code: 'cu', name: 'Church Slavic' },
-    { code: 'cv', name: 'Chuvash' },
-    { code: 'kw', name: 'Cornish' },
-    { code: 'co', name: 'Corsican' },
-    { code: 'cr', name: 'Cree' },
-    { code: 'cy', name: 'Welsh' },
-    { code: 'dv', name: 'Divehi' },
-    { code: 'dz', name: 'Dzongkha' },
-    { code: 'eo', name: 'Esperanto' },
-    { code: 'ee', name: 'Ewe' },
-    { code: 'fo', name: 'Faroese' },
-    { code: 'fj', name: 'Fijian' },
-    { code: 'fy', name: 'Western Frisian' },
-    { code: 'ff', name: 'Fulah' },
-    { code: 'gd', name: 'Scottish Gaelic' },
-    { code: 'ga', name: 'Irish' },
-    { code: 'gl', name: 'Galician' },
-    { code: 'lg', name: 'Ganda' },
-    { code: 'ka', name: 'Georgian' },
-    { code: 'gn', name: 'Guarani' },
-    { code: 'gu', name: 'Gujarati' },
-    { code: 'ht', name: 'Haitian' },
-    { code: 'ha', name: 'Hausa' },
-    { code: 'hz', name: 'Herero' },
-    { code: 'ho', name: 'Hiri Motu' },
-    { code: 'is', name: 'Icelandic' },
-    { code: 'io', name: 'Ido' },
-    { code: 'ig', name: 'Igbo' },
-    { code: 'iu', name: 'Inuktitut' },
-    { code: 'ie', name: 'Interlingue' },
-    { code: 'ia', name: 'Interlingua' },
-    { code: 'ik', name: 'Inupiaq' },
-    { code: 'jv', name: 'Javanese' },
-    { code: 'kl', name: 'Kalaallisut' },
-    { code: 'kn', name: 'Kannada' },
-    { code: 'kr', name: 'Kanuri' },
-    { code: 'ks', name: 'Kashmiri' },
-    { code: 'kk', name: 'Kazakh' },
-    { code: 'km', name: 'Central Khmer' },
-    { code: 'ki', name: 'Kikuyu' },
-    { code: 'rw', name: 'Kinyarwanda' },
-    { code: 'ky', name: 'Kirghiz' },
-    { code: 'kv', name: 'Komi' },
-    { code: 'kg', name: 'Kongo' },
-    { code: 'kj', name: 'Kuanyama' },
-    { code: 'ku', name: 'Kurdish' },
-    { code: 'lo', name: 'Lao' },
-    { code: 'la', name: 'Latin' },
-    { code: 'ln', name: 'Lingala' },
-    { code: 'li', name: 'Limburgan' },
-    { code: 'lb', name: 'Luxembourgish' },
-    { code: 'lu', name: 'Luba-Katanga' },
-    { code: 'mk', name: 'Macedonian' },
-    { code: 'mg', name: 'Malagasy' },
-    { code: 'ml', name: 'Malayalam' },
-    { code: 'mt', name: 'Maltese' },
-    { code: 'gv', name: 'Manx' },
-    { code: 'mi', name: 'Maori' },
-    { code: 'mr', name: 'Marathi' },
-    { code: 'mh', name: 'Marshallese' },
-    { code: 'mn', name: 'Mongolian' },
-    { code: 'na', name: 'Nauru' },
-    { code: 'nv', name: 'Navajo' },
-    { code: 'nd', name: 'North Ndebele' },
-    { code: 'nr', name: 'South Ndebele' },
-    { code: 'ng', name: 'Ndonga' },
-    { code: 'ne', name: 'Nepali' },
-    { code: 'nn', name: 'Norwegian Nynorsk' },
-    { code: 'nb', name: 'Norwegian Bokmål' },
-    { code: 'oc', name: 'Occitan' },
-    { code: 'oj', name: 'Ojibwa' },
-    { code: 'or', name: 'Oriya' },
-    { code: 'om', name: 'Oromo' },
-    { code: 'os', name: 'Ossetian' },
-    { code: 'pi', name: 'Pali' },
-    { code: 'ps', name: 'Pushto' },
-    { code: 'qu', name: 'Quechua' },
-    { code: 'rm', name: 'Romansh' },
-    { code: 'rn', name: 'Rundi' },
-    { code: 'sa', name: 'Sanskrit' },
-    { code: 'sc', name: 'Sardinian' },
-    { code: 'sd', name: 'Sindhi' },
-    { code: 'se', name: 'Northern Sami' },
-    { code: 'sm', name: 'Samoan' },
-    { code: 'sg', name: 'Sango' },
-    { code: 'sr', name: 'Serbian' },
-    { code: 'sn', name: 'Shona' },
-    { code: 'si', name: 'Sinhala' },
-    { code: 'ss', name: 'Swati' },
-    { code: 'st', name: 'Southern Sotho' },
-    { code: 'su', name: 'Sundanese' },
-    { code: 'ta', name: 'Tamil' },
-    { code: 'te', name: 'Telugu' },
-    { code: 'tg', name: 'Tajik' },
-    { code: 'ti', name: 'Tigrinya' },
-    { code: 'to', name: 'Tonga' },
-    { code: 'ts', name: 'Tsonga' },
-    { code: 'tn', name: 'Tswana' },
-    { code: 'tk', name: 'Turkmen' },
-    { code: 'tw', name: 'Twi' },
-    { code: 'ty', name: 'Tahitian' },
-    { code: 'ug', name: 'Uighur' },
-    { code: 'uk', name: 'Ukrainian' },
-    { code: 'uz', name: 'Uzbek' },
-    { code: 've', name: 'Venda' },
-    { code: 'vo', name: 'Volapük' },
-    { code: 'wa', name: 'Walloon' },
-    { code: 'wo', name: 'Wolof' },
-    { code: 'xh', name: 'Xhosa' },
-    { code: 'yi', name: 'Yiddish' },
-    { code: 'yo', name: 'Yoruba' },
-    { code: 'za', name: 'Zhuang' },
-    { code: 'zu', name: 'Zulu' },
-  ];
-
   useEffect(() => {
     loadServerInfo();
-    loadConfiguration(); 
-    setAvailableLanguages(languages);
+    loadConfiguration();
   }, []);
 
   const loadServerInfo = async () => {
@@ -462,7 +345,6 @@ function Configuration() {
     if (wizardStep < 2) {
       setWizardStep(wizardStep + 1);
     } else {
-      // Save wizard settings
       setWizardOpen(false);
     }
   };
@@ -472,248 +354,58 @@ function Configuration() {
       setWizardStep(wizardStep - 1);
     }
   };
-      { code: 'ath', name: 'Athapascan languages' },
-      { code: 'aud', name: 'Audio Description' },
-      { code: 'aus', name: 'Australian languages' },
-      { code: 'map', name: 'Austronesian languages' },
-      { code: 'av', name: 'Avaric' },
-      { code: 'ae', name: 'Avestan' },
-      { code: 'awa', name: 'Awadhi' },
-      { code: 'ay', name: 'Aymara' },
-      { code: 'az', name: 'Azerbaijani' },
-      { code: 'ban', name: 'Balinese' },
-      { code: 'bat', name: 'Baltic languages' },
-      { code: 'bal', name: 'Baluchi' },
-      { code: 'bm', name: 'Bambara' },
-      { code: 'bai', name: 'Bamileke languages' },
-      { code: 'bad', name: 'Banda languages' },
-      { code: 'bnt', name: 'Bantu languages' },
-      { code: 'bas', name: 'Basa' },
-      { code: 'ba', name: 'Bashkir' },
-      { code: 'eu', name: 'Basque' },
-      // ... many more languages (truncated for brevity)
-      { code: 'en', name: 'English' },
-      { code: 'fr', name: 'French' },
-      { code: 'de', name: 'German' },
-      { code: 'es', name: 'Spanish' },
-      { code: 'zh', name: 'Chinese' },
-      { code: 'ja', name: 'Japanese' },
-      { code: 'ko', name: 'Korean' },
-      { code: 'ru', name: 'Russian' },
-    ];
-    setAvailableLanguages(mockLanguages);
-  }, []);
 
-  const moveLanguageToSelected = (language: LanguageItem) => {
-    setAvailableLanguages(prev => prev.filter(l => l.code !== language.code));
-    setSelectedLanguages(prev => [...prev, language]);
-  };
-
-  const moveLanguageToAvailable = (language: LanguageItem) => {
-    setSelectedLanguages(prev => prev.filter(l => l.code !== language.code));
-    setAvailableLanguages(prev => [...prev, language].sort((a, b) => a.name.localeCompare(b.name)));
-  };
-
-  const renderLanguageSelector = () => (
-    <Grid container spacing={2} alignItems="center">
-      <Grid item xs={5}>
-        <FormControl fullWidth>
-          <FormLabel>Available</FormLabel>
-          <Paper
-            variant="outlined"
-            sx={{
-              height: 200,
-              overflow: 'auto',
-              p: 1,
-            }}
-          >
-            <List dense>
-              {availableLanguages.map((language) => (
-                <ListItem
-                  key={language.code}
-                  dense
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => moveLanguageToSelected(language)}
-                >
-                  <ListItemText primary={language.name} />
-                </ListItem>
-              ))}
-            </List>
-          </Paper>
-        </FormControl>
-      </Grid>
-      
-      <Grid item xs={2} sx={{ textAlign: 'center' }}>
-        <Box display="flex" flexDirection="column" gap={1}>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<SwapIcon />}
-          >
-            →
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<SwapIcon />}
-          >
-            ←
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<SwapIcon />}
-          >
-            ↑
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<SwapIcon />}
-          >
-            ↓
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<SwapIcon />}
-          >
-            ⤴
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<SwapIcon />}
-          >
-            ⤵
-          </Button>
-        </Box>
-      </Grid>
-      
-      <Grid item xs={5}>
-        <FormControl fullWidth>
-          <FormLabel>Selected</FormLabel>
-          <Paper
-            variant="outlined"
-            sx={{
-              height: 200,
-              overflow: 'auto',
-              p: 1,
-            }}
-          >
-            <List dense>
-              {selectedLanguages.map((language) => (
-                <ListItem
-                  key={language.code}
-                  dense
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => moveLanguageToAvailable(language)}
-                >
-                  <ListItemText primary={language.name} />
-                </ListItem>
-              ))}
-            </List>
-          </Paper>
-        </FormControl>
-      </Grid>
-    </Grid>
-  );
-
-  const renderConfigContent = () => {
-    if (selectedSection === 'general' && selectedSubsection === 'base') {
-      return (
-        <Box>
-          {/* Toolbar */}
-          <Paper sx={{ mb: 2 }}>
-            <Toolbar>
-              <Button
-                startIcon={<SaveIcon />}
-                variant="contained"
-                sx={{ mr: 1 }}
-              >
-                Save
-              </Button>
-              <Button
-                startIcon={<UndoIcon />}
-                variant="outlined"
-                sx={{ mr: 1 }}
-              >
-                Undo
-              </Button>
-              <Button
-                variant="outlined"
-                sx={{ mr: 1 }}
-                onClick={() => setWizardOpen(true)}
-              >
-                Start wizard
-              </Button>
-              
-              <Box sx={{ flexGrow: 1 }} />
-              
-              <Button
-                variant="outlined"
-                sx={{ mr: 1 }}
-              >
-                View level: basic
-              </Button>
-              <Button
-                startIcon={<HelpIcon />}
-                variant="outlined"
-              >
-                Help
-              </Button>
-            </Toolbar>
-          </Paper>
-
-          {/* Configuration Forms */}
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
+  const renderContent = () => {
+    switch (selectedSection) {
+      case 'general':
+        switch (selectedSubsection) {
+          case 'base':
+            return (
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
                     Server Settings
                   </Typography>
-                  <TextField
-                    fullWidth
-                    label="Tvheadend server name:"
-                    value={serverName}
-                    onChange={(e) => setServerName(e.target.value)}
-                    margin="normal"
-                  />
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="Server Name"
+                        value={serverName}
+                        onChange={(e) => setServerName(e.target.value)}
+                        margin="normal"
+                      />
+                    </Grid>
+                  </Grid>
+                  
+                  <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
                     Web Interface Settings
                   </Typography>
-                  <Grid container spacing={2}>
+                  <Grid container spacing={3}>
                     <Grid item xs={12} md={6}>
                       <FormControl fullWidth margin="normal">
-                        <InputLabel>Default language:</InputLabel>
+                        <InputLabel>Default Language</InputLabel>
                         <Select
                           value={defaultLanguage}
-                          label="Default language:"
                           onChange={(e) => setDefaultLanguage(e.target.value)}
+                          label="Default Language"
                         >
-                          <MenuItem value="">Select Default language ...</MenuItem>
-                          <MenuItem value="en">English</MenuItem>
-                          <MenuItem value="de">German</MenuItem>
-                          <MenuItem value="fr">French</MenuItem>
-                          <MenuItem value="es">Spanish</MenuItem>
+                          {languages.map((lang) => (
+                            <MenuItem key={lang.code} value={lang.code}>
+                              {lang.name}
+                            </MenuItem>
+                          ))}
                         </Select>
                       </FormControl>
                     </Grid>
+                    
                     <Grid item xs={12} md={6}>
                       <FormControl fullWidth margin="normal">
-                        <InputLabel>Theme:</InputLabel>
+                        <InputLabel>Theme</InputLabel>
                         <Select
                           value={theme}
-                          label="Theme:"
                           onChange={(e) => setTheme(e.target.value)}
+                          label="Theme"
                         >
                           <MenuItem value="Blue">Blue</MenuItem>
                           <MenuItem value="Gray">Gray</MenuItem>
@@ -721,23 +413,25 @@ function Configuration() {
                         </Select>
                       </FormControl>
                     </Grid>
+                    
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
-                        label="Items per page:"
+                        label="Items per page"
+                        type="number"
                         value={itemsPerPage}
                         onChange={(e) => setItemsPerPage(e.target.value)}
                         margin="normal"
-                        type="number"
                       />
                     </Grid>
+                    
                     <Grid item xs={12} md={6}>
                       <FormControl fullWidth margin="normal">
-                        <InputLabel>Default view level:</InputLabel>
+                        <InputLabel>Default view level</InputLabel>
                         <Select
                           value={defaultViewLevel}
-                          label="Default view level:"
                           onChange={(e) => setDefaultViewLevel(e.target.value)}
+                          label="Default view level"
                         >
                           <MenuItem value="Basic">Basic</MenuItem>
                           <MenuItem value="Advanced">Advanced</MenuItem>
@@ -745,262 +439,363 @@ function Configuration() {
                         </Select>
                       </FormControl>
                     </Grid>
-                    <Grid item xs={12}>
-                      <FormGroup>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={channelNumbers}
-                              onChange={(e) => setChannelNumbers(e.target.checked)}
-                            />
-                          }
-                          label="Channel name with numbers:"
+                  </Grid>
+                  
+                  <FormGroup>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={channelNumbers}
+                          onChange={(e) => setChannelNumbers(e.target.checked)}
                         />
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={channelSources}
-                              onChange={(e) => setChannelSources(e.target.checked)}
-                            />
-                          }
-                          label="Channel name with sources:"
+                      }
+                      label="Show channel numbers"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={channelSources}
+                          onChange={(e) => setChannelSources(e.target.checked)}
                         />
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={kodiFormatting}
-                              onChange={(e) => setKodiFormatting(e.target.checked)}
-                            />
-                          }
-                          label="Kodi label formatting support:"
+                      }
+                      label="Show channel sources"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={kodiFormatting}
+                          onChange={(e) => setKodiFormatting(e.target.checked)}
                         />
-                      </FormGroup>
+                      }
+                      label="Use Kodi formatting"
+                    />
+                  </FormGroup>
+                  
+                  <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                    Advanced EPG Settings
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    <Grid item xs={5}>
+                      <Typography variant="subtitle1">Available Languages</Typography>
+                      <Paper sx={{ height: 200, overflow: 'auto', p: 1 }}>
+                        <List dense>
+                          {languages.filter(lang => !selectedLanguages.find(sl => sl.code === lang.code)).map((lang) => (
+                            <ListItem key={lang.code} disablePadding>
+                              <ListItemButton>
+                                <ListItemText primary={lang.name} secondary={lang.code.toUpperCase()} />
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                        </List>
+                      </Paper>
+                    </Grid>
+                    
+                    <Grid item xs={2} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1 }}>
+                      <Button variant="outlined">→</Button>
+                      <Button variant="outlined">←</Button>
+                      <Button variant="outlined">↑</Button>
+                      <Button variant="outlined">↓</Button>
+                      <Button variant="outlined">⤴</Button>
+                      <Button variant="outlined">⤵</Button>
+                    </Grid>
+                    
+                    <Grid item xs={5}>
+                      <Typography variant="subtitle1">Selected Languages</Typography>
+                      <Paper sx={{ height: 200, overflow: 'auto', p: 1 }}>
+                        <List dense>
+                          {selectedLanguages.map((lang) => (
+                            <ListItem key={lang.code} disablePadding>
+                              <ListItemButton>
+                                <ListItemText primary={lang.name} secondary={lang.code.toUpperCase()} />
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                        </List>
+                      </Paper>
                     </Grid>
                   </Grid>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    EPG Settings
-                  </Typography>
-                  <Typography variant="body2" gutterBottom>
-                    Default language(s):
-                  </Typography>
-                  {renderLanguageSelector()}
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
+                  
+                  <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
                     Miscellaneous Settings
                   </Typography>
-                  <Grid container spacing={2}>
+                  <Grid container spacing={3}>
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
-                        label="IPTV threads:"
+                        label="IPTV scanning threads"
+                        type="number"
                         value={iptvThreads}
                         onChange={(e) => setIptvThreads(e.target.value)}
                         margin="normal"
-                        type="number"
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={parseHbbTV}
-                            onChange={(e) => setParseHbbTV(e.target.checked)}
-                          />
-                        }
-                        label="Parse HbbTV info:"
                       />
                     </Grid>
                   </Grid>
+                  
+                  <FormGroup>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={parseHbbTV}
+                          onChange={(e) => setParseHbbTV(e.target.checked)}
+                        />
+                      }
+                      label="Parse HbbTV Application Information"
+                    />
+                  </FormGroup>
                 </CardContent>
               </Card>
-            </Grid>
-          </Grid>
-        </Box>
-      );
-    }
-
-    return (
-      <Box>
-        <Typography variant="h6" gutterBottom>
-          {configSections.find(s => s.id === selectedSection)?.label}
-          {selectedSubsection && ` - ${configSections.find(s => s.id === selectedSection)?.subsections?.find(ss => ss.id === selectedSubsection)?.label}`}
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Configuration options for this section will be implemented here.
-        </Typography>
-      </Box>
-    );
-  };
-
-  return (
-    <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Configuration
-      </Typography>
-
-      <Grid container spacing={2}>
-        {/* Left Sidebar */}
-        <Grid item xs={12} md={3}>
-          <Paper>
-            <List>
-              {configSections.map((section) => (
-                <Box key={section.id}>
-                  <ListItem disablePadding>
-                    <ListItemButton
-                      selected={selectedSection === section.id}
-                      onClick={() => {
-                        setSelectedSection(section.id);
-                        if (section.subsections) {
-                          setSelectedSubsection(section.subsections[0].id);
-                        } else {
-                          setSelectedSubsection('');
-                        }
-                      }}
-                    >
-                      <ListItemText primary={section.label} />
-                    </ListItemButton>
-                  </ListItem>
-                  {section.subsections && selectedSection === section.id && (
-                    <List component="div" disablePadding>
-                      {section.subsections.map((subsection) => (
-                        <ListItem key={subsection.id} disablePadding>
-                          <ListItemButton
-                            sx={{ pl: 4 }}
-                            selected={selectedSubsection === subsection.id}
-                            onClick={() => setSelectedSubsection(subsection.id)}
-                          >
-                            <ListItemText primary={subsection.label} />
-                          </ListItemButton>
-                        </ListItem>
-                      ))}
-                    </List>
-                  )}
-                </Box>
-              ))}
-            </List>
-          </Paper>
-        </Grid>
-
-        {/* Main Content */}
-        <Grid item xs={12} md={9}>
-          <Paper sx={{ p: 2 }}>
-            {renderConfigContent()}
-          </Paper>
-        </Grid>
-      </Grid>
-
-      {/* Setup Wizard Dialog */}
-      <Dialog
-        open={wizardOpen}
-        onClose={() => setWizardOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          Welcome to Tvheadend Setup Wizard
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Welcome to Tvheadend, Your TV Streaming Server and Video Recorder
-            </Typography>
-            <Typography variant="body2" gutterBottom>
-              Let's start by configuring the basic language settings. Please select the default user interface and EPG language(s).
-            </Typography>
-            <Box component="ul" sx={{ pl: 3 }}>
-              <li>This wizard is optional, and can be cancelled at any time, but recommended for new users.</li>
-              <li>Running this wizard on existing configurations is NOT a good idea as it may lead to confusion, misconfiguration and unexpected features! ;)</li>
-              <li>The wizard will restart and reload the interface in your chosen language, unfortunately not all translations are available/complete.</li>
-              <li>If you get stuck at any point and need a little more information, press [Help].</li>
-            </Box>
-          </Box>
-
-          <Card sx={{ mb: 2 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Web interface
-              </Typography>
-              <FormControl fullWidth>
-                <InputLabel>Language:</InputLabel>
-                <Select
-                  value=""
-                  label="Language:"
-                >
-                  <MenuItem value="">Select Language ...</MenuItem>
-                  <MenuItem value="en">English</MenuItem>
-                  <MenuItem value="de">German</MenuItem>
-                  <MenuItem value="fr">French</MenuItem>
-                </Select>
-              </FormControl>
-            </CardContent>
-          </Card>
-
+            );
+          
+          default:
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {selectedSubsection === 'imagecache' ? 'Image Cache Settings' : 'SAT>IP Server Settings'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Configure {selectedSubsection === 'imagecache' ? 'image caching for channel logos and program artwork' : 'SAT>IP server functionality'}.
+                  </Typography>
+                </CardContent>
+              </Card>
+            );
+        }
+        
+      default:
+        return (
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                EPG Language (priority order)
+                {configSections.find(s => s.id === selectedSection)?.label || 'Configuration'}
+              </Typography>
+              <Typography variant="body2" paragraph>
+                {selectedSection === 'users' && 'Manage user accounts, access control, and authentication settings.'}
+                {selectedSection === 'dvb-inputs' && 'Configure DVB input sources, networks, and hardware adapters.'}
+                {selectedSection === 'channel-epg' && 'Manage channels, EPG sources, and program guide settings.'}
+                {selectedSection === 'stream' && 'Configure streaming profiles, transcoding, and codec settings.'}
+                {selectedSection === 'recording' && 'Set up recording profiles, DVR settings, and timeshift options.'}
+                {selectedSection === 'debugging' && 'Configure logging, diagnostics, and debug information.'}
+              </Typography>
+            </CardContent>
+          </Card>
+        );
+    }
+  };
+
+  return (
+    <Box sx={{ display: 'flex', height: 'calc(100vh - 120px)' }}>
+      {/* Sidebar */}
+      <Paper sx={{ width: 300, mr: 2, overflow: 'auto' }}>
+        <Toolbar>
+          <Typography variant="h6">Configuration</Typography>
+        </Toolbar>
+        <Divider />
+        
+        {/* Toolbar Buttons */}
+        <Box sx={{ p: 1, borderBottom: '1px solid #e0e0e0' }}>
+          <Button
+            startIcon={<SaveIcon />}
+            variant="contained"
+            size="small"
+            onClick={saveConfiguration}
+            sx={{ mr: 1, mb: 1 }}
+          >
+            Save
+          </Button>
+          <Button
+            startIcon={<UndoIcon />}
+            variant="outlined"
+            size="small"
+            onClick={undoChanges}
+            sx={{ mr: 1, mb: 1 }}
+          >
+            Undo
+          </Button>
+          <Button
+            startIcon={<WizardIcon />}
+            variant="outlined"
+            size="small"
+            onClick={startWizard}
+            sx={{ mr: 1, mb: 1 }}
+          >
+            Start wizard
+          </Button>
+          <Button
+            startIcon={<HelpIcon />}
+            variant="outlined"
+            size="small"
+            sx={{ mb: 1 }}
+          >
+            Help
+          </Button>
+        </Box>
+        
+        <List component="nav">
+          {configSections.map((section) => (
+            <div key={section.id}>
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={() => {
+                    if (section.subsections) {
+                      handleSectionToggle(section.id);
+                    }
+                    handleSectionSelect(section.id);
+                  }}
+                  selected={selectedSection === section.id}
+                >
+                  <ListItemIcon>{section.icon}</ListItemIcon>
+                  <ListItemText primary={section.label} />
+                  {section.subsections && (
+                    expandedSections.includes(section.id) ? <ExpandLess /> : <ExpandMore />
+                  )}
+                </ListItemButton>
+              </ListItem>
+              
+              {section.subsections && (
+                <Collapse in={expandedSections.includes(section.id)} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {section.subsections.map((subsection) => (
+                      <ListItem key={subsection.id} disablePadding>
+                        <ListItemButton
+                          sx={{ pl: 4 }}
+                          onClick={() => handleSectionSelect(section.id, subsection.id)}
+                          selected={selectedSection === section.id && selectedSubsection === subsection.id}
+                        >
+                          <ListItemIcon>{subsection.icon}</ListItemIcon>
+                          <ListItemText primary={subsection.label} />
+                        </ListItemButton>
+                      </ListItem>
+                    ))}
+                  </List>
+                </Collapse>
+              )}
+            </div>
+          ))}
+        </List>
+      </Paper>
+
+      {/* Main Content */}
+      <Box sx={{ flex: 1, overflow: 'auto' }}>
+        {renderContent()}
+      </Box>
+
+      {/* Setup Wizard Dialog */}
+      <Dialog open={wizardOpen} onClose={() => setWizardOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Setup Wizard - Step {wizardStep + 1} of 3
+        </DialogTitle>
+        <DialogContent>
+          {wizardStep === 0 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Welcome to Tvheadend
+              </Typography>
+              <Typography paragraph>
+                This wizard will guide you through the initial setup of your Tvheadend server.
+                You can skip this wizard and configure everything manually later.
+              </Typography>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Interface Language</InputLabel>
+                <Select
+                  value={wizardLanguage}
+                  onChange={(e) => setWizardLanguage(e.target.value)}
+                  label="Interface Language"
+                >
+                  {languages.map((lang) => (
+                    <MenuItem key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+          )}
+          
+          {wizardStep === 1 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                EPG Language Priority
+              </Typography>
+              <Typography paragraph>
+                Select the preferred languages for Electronic Program Guide data.
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={4}>
                   <FormControl fullWidth>
-                    <InputLabel>Language 1:</InputLabel>
+                    <InputLabel>Language 1 (highest priority)</InputLabel>
                     <Select
-                      value=""
-                      label="Language 1:"
+                      value={epgLang1}
+                      onChange={(e) => setEpgLang1(e.target.value)}
+                      label="Language 1 (highest priority)"
                     >
-                      <MenuItem value="">Select Language 1 ...</MenuItem>
-                      <MenuItem value="en">English</MenuItem>
-                      <MenuItem value="de">German</MenuItem>
+                      {languages.map((lang) => (
+                        <MenuItem key={lang.code} value={lang.code}>
+                          {lang.name}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Grid>
                 <Grid item xs={4}>
                   <FormControl fullWidth>
-                    <InputLabel>Language 2:</InputLabel>
+                    <InputLabel>Language 2</InputLabel>
                     <Select
-                      value=""
-                      label="Language 2:"
+                      value={epgLang2}
+                      onChange={(e) => setEpgLang2(e.target.value)}
+                      label="Language 2"
                     >
-                      <MenuItem value="">Select Language 2 ...</MenuItem>
-                      <MenuItem value="en">English</MenuItem>
-                      <MenuItem value="de">German</MenuItem>
+                      <MenuItem value="">None</MenuItem>
+                      {languages.map((lang) => (
+                        <MenuItem key={lang.code} value={lang.code}>
+                          {lang.name}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Grid>
                 <Grid item xs={4}>
                   <FormControl fullWidth>
-                    <InputLabel>Language 3:</InputLabel>
+                    <InputLabel>Language 3</InputLabel>
                     <Select
-                      value=""
-                      label="Language 3:"
+                      value={epgLang3}
+                      onChange={(e) => setEpgLang3(e.target.value)}
+                      label="Language 3"
                     >
-                      <MenuItem value="">Select Language 3 ...</MenuItem>
-                      <MenuItem value="en">English</MenuItem>
-                      <MenuItem value="de">German</MenuItem>
+                      <MenuItem value="">None</MenuItem>
+                      {languages.map((lang) => (
+                        <MenuItem key={lang.code} value={lang.code}>
+                          {lang.name}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Grid>
               </Grid>
-            </CardContent>
-          </Card>
+            </Box>
+          )}
+          
+          {wizardStep === 2 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Setup Complete
+              </Typography>
+              <Typography paragraph>
+                The basic setup is now complete. You can continue to configure
+                network sources, channels, and other settings using the Configuration menu.
+              </Typography>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setWizardOpen(false)}>Cancel</Button>
-          <Button variant="contained">Save & Next</Button>
-          <Button variant="outlined">Help</Button>
+          {wizardStep > 0 && (
+            <Button onClick={previousWizardStep}>Previous</Button>
+          )}
+          <Button onClick={nextWizardStep} variant="contained">
+            {wizardStep === 2 ? 'Finish' : 'Save & Next'}
+          </Button>
+          <Button startIcon={<HelpIcon />}>Help</Button>
         </DialogActions>
       </Dialog>
     </Box>
