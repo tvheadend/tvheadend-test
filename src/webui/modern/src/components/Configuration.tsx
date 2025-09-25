@@ -8,17 +8,13 @@ import {
   ListItemButton,
   ListItemText,
   Grid,
-  TextField,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Checkbox,
-  FormControlLabel,
   Button,
   Card,
   CardContent,
-  FormGroup,
   Toolbar,
   Dialog,
   DialogTitle,
@@ -44,17 +40,41 @@ import {
   BugReport as DebugIcon,
   AutoAwesome as WizardIcon,
 } from '@mui/icons-material';
+import { 
+  loadLanguages, 
+  LanguageOption
+} from '../utils/api';
+import AccessEntriesSection from './sections/AccessEntriesSection';
+import PasswordsSection from './sections/PasswordsSection';
+import IPBlockingSection from './sections/IPBlockingSection';
+import ImageCacheSection from './sections/ImageCacheSection';
+import NetworksSection from './sections/NetworksSection';
+import MuxesSection from './sections/MuxesSection';
+import ServicesSection from './sections/ServicesSection';
+import MuxSchedulersSection from './sections/MuxSchedulersSection';
+import ChannelsSection from './sections/ChannelsSection';
+import ChannelTagsSection from './sections/ChannelTagsSection';
+import BouquetsSection from './sections/BouquetsSection';
+import EPGGrabberChannelsSection from './sections/EPGGrabberChannelsSection';
+import EPGGrabberModulesSection from './sections/EPGGrabberModulesSection';
+import RatingLabelsSection from './sections/RatingLabelsSection';
+import StreamProfilesSection from './sections/StreamProfilesSection';
+import CodecProfilesSection from './sections/CodecProfilesSection';
+import ESFiltersSection from './sections/ESFiltersSection';
+import DVRProfilesSection from './sections/DVRProfilesSection';
+import TimeshiftSection from './sections/TimeshiftSection';
+import TVHeadendLogSection from './sections/TVHeadendLogSection';
+import MemoryInfoSection from './sections/MemoryInfoSection';
+import TVAdaptersSection from './sections/TVAdaptersSection';
+import CAClientSection from './sections/CAClientSection';
+import BaseConfigSection from './sections/BaseConfigSection';
+// import BaseConfigSection from './sections/BaseConfigSection';
 
 interface ConfigSection {
   id: string;
   label: string;
   icon: React.ReactNode;
   subsections?: ConfigSection[];
-}
-
-interface LanguageItem {
-  code: string;
-  name: string;
 }
 
 interface ServerInfo {
@@ -79,17 +99,12 @@ function Configuration() {
   const [defaultLanguage, setDefaultLanguage] = useState('');
   const [theme, setTheme] = useState('Blue');
   const [itemsPerPage, setItemsPerPage] = useState('50');
-  const [defaultViewLevel, setDefaultViewLevel] = useState('Basic');
+  const [defaultViewLevel, setDefaultViewLevel] = useState('0');
   const [channelNumbers, setChannelNumbers] = useState(false);
   const [channelSources, setChannelSources] = useState(false);
   const [kodiFormatting, setKodiFormatting] = useState(false);
   
-  // EPG Settings
-  const [iptvThreads, setIptvThreads] = useState('2');
-  const [parseHbbTV, setParseHbbTV] = useState(false);
-  
   // Language selection states
-  const [selectedLanguages] = useState<LanguageItem[]>([]);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
   const [wizardLanguage, setWizardLanguage] = useState('');
@@ -97,29 +112,16 @@ function Configuration() {
   const [epgLang2, setEpgLang2] = useState('');
   const [epgLang3, setEpgLang3] = useState('');
 
-  const [languages, setLanguages] = useState<LanguageItem[]>([]);
+  const [languages, setLanguages] = useState<LanguageOption[]>([]);
 
-  // Load real languages from API
-  const loadLanguages = async () => {
+  // Load dynamic data from APIs
+  const loadDynamicData = async () => {
     try {
-      const response = await fetch('/api/language/list');
-      const data = await response.json();
-      if (data.entries) {
-        const languageList = data.entries.map((lang: any) => ({
-          code: lang.identifier || lang.key || lang.id,
-          name: lang.val || lang.name || lang.identifier,
-        }));
-        setLanguages(languageList);
-      }
+      // Load languages - we can use any of the three language endpoints
+      const languageData = await loadLanguages();
+      setLanguages(languageData);
     } catch (error) {
-      console.error('Failed to load languages:', error);
-      // Fallback to basic languages if API fails
-      setLanguages([
-        { code: 'en', name: 'English' },
-        { code: 'de', name: 'German' },
-        { code: 'fr', name: 'French' },
-        { code: 'es', name: 'Spanish' },
-      ]);
+      console.error('Failed to load configuration data:', error);
     }
   };
 
@@ -189,6 +191,14 @@ function Configuration() {
       ]
     },
     {
+      id: 'cas',
+      label: 'CAs',
+      icon: <SecurityIcon />,
+      subsections: [
+        { id: 'ca-clients', label: 'CA Clients', icon: <SecurityIcon /> },
+      ]
+    },
+    {
       id: 'debugging',
       label: 'Debugging',
       icon: <DebugIcon />,
@@ -202,7 +212,7 @@ function Configuration() {
   useEffect(() => {
     loadServerInfo();
     loadConfiguration();
-    loadLanguages();
+    loadDynamicData();
   }, []);
 
   const loadServerInfo = async () => {
@@ -233,7 +243,7 @@ function Configuration() {
         setDefaultLanguage(config.language_ui || '');
         setTheme(config.theme_ui || 'Blue');
         setItemsPerPage(String(config.page_size_ui || 50));
-        setDefaultViewLevel(config.uilevel === 0 ? 'Basic' : config.uilevel === 1 ? 'Advanced' : 'Expert');
+        setDefaultViewLevel(String(config.uilevel ?? 0));
         setChannelNumbers(config.chname_num !== false);
         setChannelSources(config.chname_src === true);
         setKodiFormatting(config.label_formatting === true);
@@ -245,7 +255,7 @@ function Configuration() {
 
   const saveConfiguration = async () => {
     try {
-      const uilevel = defaultViewLevel === 'Basic' ? 0 : defaultViewLevel === 'Advanced' ? 1 : 2;
+      const uilevel = parseInt(defaultViewLevel) || 0;
       
       const configData = {
         uuid: serverInfo?.uuid || '',
@@ -325,203 +335,122 @@ function Configuration() {
       case 'general':
         switch (selectedSubsection) {
           case 'base':
+            return <BaseConfigSection />;
+          
+          case 'imagecache':
+            return <ImageCacheSection />;
+          case 'satip-server':
             return (
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Server Settings
-                  </Typography>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Server Name"
-                        value={serverName}
-                        onChange={(e) => setServerName(e.target.value)}
-                        margin="normal"
-                      />
-                    </Grid>
-                  </Grid>
-                  
-                  <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                    Web Interface Settings
-                  </Typography>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                      <FormControl fullWidth margin="normal">
-                        <InputLabel>Default Language</InputLabel>
-                        <Select
-                          value={defaultLanguage}
-                          onChange={(e) => setDefaultLanguage(e.target.value)}
-                          label="Default Language"
-                        >
-                          {languages.map((lang) => (
-                            <MenuItem key={lang.code} value={lang.code}>
-                              {lang.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <FormControl fullWidth margin="normal">
-                        <InputLabel>Theme</InputLabel>
-                        <Select
-                          value={theme}
-                          onChange={(e) => setTheme(e.target.value)}
-                          label="Theme"
-                        >
-                          <MenuItem value="Blue">Blue</MenuItem>
-                          <MenuItem value="Gray">Gray</MenuItem>
-                          <MenuItem value="Access">Access</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Items per page"
-                        type="number"
-                        value={itemsPerPage}
-                        onChange={(e) => setItemsPerPage(e.target.value)}
-                        margin="normal"
-                      />
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <FormControl fullWidth margin="normal">
-                        <InputLabel>Default view level</InputLabel>
-                        <Select
-                          value={defaultViewLevel}
-                          onChange={(e) => setDefaultViewLevel(e.target.value)}
-                          label="Default view level"
-                        >
-                          <MenuItem value="Basic">Basic</MenuItem>
-                          <MenuItem value="Advanced">Advanced</MenuItem>
-                          <MenuItem value="Expert">Expert</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                  </Grid>
-                  
-                  <FormGroup>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={channelNumbers}
-                          onChange={(e) => setChannelNumbers(e.target.checked)}
-                        />
-                      }
-                      label="Show channel numbers"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={channelSources}
-                          onChange={(e) => setChannelSources(e.target.checked)}
-                        />
-                      }
-                      label="Show channel sources"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={kodiFormatting}
-                          onChange={(e) => setKodiFormatting(e.target.checked)}
-                        />
-                      }
-                      label="Use Kodi formatting"
-                    />
-                  </FormGroup>
-                  
-                  <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                    Advanced EPG Settings
-                  </Typography>
-                  
-                  <Grid container spacing={2}>
-                    <Grid item xs={5}>
-                      <Typography variant="subtitle1">Available Languages</Typography>
-                      <Paper sx={{ height: 200, overflow: 'auto', p: 1 }}>
-                        <List dense>
-                          {languages.filter(lang => !selectedLanguages.find(sl => sl.code === lang.code)).map((lang) => (
-                            <ListItem key={lang.code} disablePadding>
-                              <ListItemButton>
-                                <ListItemText primary={lang.name} secondary={lang.code.toUpperCase()} />
-                              </ListItemButton>
-                            </ListItem>
-                          ))}
-                        </List>
-                      </Paper>
-                    </Grid>
-                    
-                    <Grid item xs={2} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1 }}>
-                      <Button variant="outlined">→</Button>
-                      <Button variant="outlined">←</Button>
-                      <Button variant="outlined">↑</Button>
-                      <Button variant="outlined">↓</Button>
-                      <Button variant="outlined">⤴</Button>
-                      <Button variant="outlined">⤵</Button>
-                    </Grid>
-                    
-                    <Grid item xs={5}>
-                      <Typography variant="subtitle1">Selected Languages</Typography>
-                      <Paper sx={{ height: 200, overflow: 'auto', p: 1 }}>
-                        <List dense>
-                          {selectedLanguages.map((lang) => (
-                            <ListItem key={lang.code} disablePadding>
-                              <ListItemButton>
-                                <ListItemText primary={lang.name} secondary={lang.code.toUpperCase()} />
-                              </ListItemButton>
-                            </ListItem>
-                          ))}
-                        </List>
-                      </Paper>
-                    </Grid>
-                  </Grid>
-                  
-                  <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                    Miscellaneous Settings
-                  </Typography>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="IPTV scanning threads"
-                        type="number"
-                        value={iptvThreads}
-                        onChange={(e) => setIptvThreads(e.target.value)}
-                        margin="normal"
-                      />
-                    </Grid>
-                  </Grid>
-                  
-                  <FormGroup>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={parseHbbTV}
-                          onChange={(e) => setParseHbbTV(e.target.checked)}
-                        />
-                      }
-                      label="Parse HbbTV Application Information"
-                    />
-                  </FormGroup>
+                  <Typography variant="h6" gutterBottom>SAT&gt;IP Server</Typography>
+                  <Typography variant="body2">SAT&gt;IP server configuration will be implemented here.</Typography>
                 </CardContent>
               </Card>
             );
-          
           default:
             return (
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
-                    {selectedSubsection === 'imagecache' ? 'Image Cache Settings' : 'SAT>IP Server Settings'}
+                    {selectedSubsection === 'imagecache' ? 'Image Cache Settings' : 'SAT&gt;IP Server Settings'}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
                     Configure {selectedSubsection === 'imagecache' ? 'image caching for channel logos and program artwork' : 'SAT>IP server functionality'}.
                   </Typography>
+                </CardContent>
+              </Card>
+            );
+        }
+        
+      case 'users':
+        switch (selectedSubsection) {
+          case 'access-entries':
+            return <AccessEntriesSection />;
+          case 'passwords':
+            return <PasswordsSection />;
+          case 'ip-blocking':
+            return <IPBlockingSection />;
+          default:
+            return <AccessEntriesSection />;
+        }
+        
+      case 'dvb-inputs':
+        switch (selectedSubsection) {
+          case 'tv-adapters':
+            return <TVAdaptersSection />;
+          case 'networks':
+            return <NetworksSection />;
+          case 'muxes':
+            return <MuxesSection />;
+          case 'services':
+            return <ServicesSection />;  
+          case 'mux-schedulers':
+            return <MuxSchedulersSection />;
+          default:
+            return <NetworksSection />;
+        }
+        
+      case 'channel-epg':
+        switch (selectedSubsection) {
+          case 'channels':
+            return <ChannelsSection />;
+          case 'channel-tags':
+            return <ChannelTagsSection />;
+          case 'bouquets':
+            return <BouquetsSection />;
+          case 'epg-grabber-channels':
+            return <EPGGrabberChannelsSection />;
+          case 'epg-grabber-modules':
+            return <EPGGrabberModulesSection />;
+          case 'rating-labels':
+            return <RatingLabelsSection />;
+          default:
+            return <ChannelsSection />;
+        }
+        
+      case 'stream':
+        switch (selectedSubsection) {
+          case 'stream-profiles':
+            return <StreamProfilesSection />;
+          case 'codec-profiles':
+            return <CodecProfilesSection />;
+          case 'esfilters':
+            return <ESFiltersSection />;
+          default:
+            return <StreamProfilesSection />;
+        }
+        
+      case 'recording':
+        switch (selectedSubsection) {
+          case 'dvr-profiles':
+            return <DVRProfilesSection />;
+          case 'timeshift':
+            return <TimeshiftSection />;
+          default:
+            return <DVRProfilesSection />;
+        }
+        
+      case 'cas':
+        switch (selectedSubsection) {
+          case 'ca-clients':
+            return <CAClientSection />;
+          default:
+            return <CAClientSection />;
+        }
+        
+      case 'debugging':
+        switch (selectedSubsection) {
+          case 'tvhlog':
+            return <TVHeadendLogSection />;
+          case 'memory-info':
+            return <MemoryInfoSection />;
+          default:
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Debugging</Typography>
+                  <Typography variant="body2">Debug configuration options.</Typography>
                 </CardContent>
               </Card>
             );
@@ -668,8 +597,8 @@ function Configuration() {
                   label="Interface Language"
                 >
                   {languages.map((lang) => (
-                    <MenuItem key={lang.code} value={lang.code}>
-                      {lang.name}
+                    <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
+                      {lang.val || lang.name || lang.identifier}
                     </MenuItem>
                   ))}
                 </Select>
@@ -695,8 +624,8 @@ function Configuration() {
                       label="Language 1 (highest priority)"
                     >
                       {languages.map((lang) => (
-                        <MenuItem key={lang.code} value={lang.code}>
-                          {lang.name}
+                        <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
+                          {lang.val || lang.name || lang.identifier}
                         </MenuItem>
                       ))}
                     </Select>
@@ -712,8 +641,8 @@ function Configuration() {
                     >
                       <MenuItem value="">None</MenuItem>
                       {languages.map((lang) => (
-                        <MenuItem key={lang.code} value={lang.code}>
-                          {lang.name}
+                        <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
+                          {lang.val || lang.name || lang.identifier}
                         </MenuItem>
                       ))}
                     </Select>
@@ -729,8 +658,8 @@ function Configuration() {
                     >
                       <MenuItem value="">None</MenuItem>
                       {languages.map((lang) => (
-                        <MenuItem key={lang.code} value={lang.code}>
-                          {lang.name}
+                        <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
+                          {lang.val || lang.name || lang.identifier}
                         </MenuItem>
                       ))}
                     </Select>
