@@ -97,7 +97,152 @@ const EPG: React.FC = () => {
   const [fulltext, setFulltext] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
-  const [selectedEvent, setSelectedEvent] = useState<EPGEvent | null>(null);
+  const [watchTVDialogOpen, setWatchTVDialogOpen] = useState(false);
+  const [createAutoRecDialogOpen, setCreateAutoRecDialogOpen] = useState(false);
+  const [programDetailsDialogOpen, setProgramDetailsDialogOpen] = useState(false);
+  const [channels, setChannels] = useState<Array<{uuid: string, name: string}>>([]);
+  const [tags, setTags] = useState<Array<{uuid: string, name: string}>>([]);
+  const [contentTypes, setContentTypes] = useState<Array<{key: number, val: string}>>([]);
+
+  // Load initial data
+  useEffect(() => {
+    loadChannels();
+    loadTags();
+    loadContentTypes();
+    loadEvents();
+  }, []);
+
+  const loadChannels = async () => {
+    try {
+      const response = await fetch('/api/channel/list');
+      const data = await response.json();
+      setChannels(data.entries || []);
+    } catch (error) {
+      console.error('Failed to load channels:', error);
+    }
+  };
+
+  const loadTags = async () => {
+    try {
+      const response = await fetch('/api/channeltag/list');
+      const data = await response.json();
+      setTags(data.entries || []);
+    } catch (error) {
+      console.error('Failed to load channel tags:', error);
+    }
+  };
+
+  const loadContentTypes = async () => {
+    try {
+      const response = await fetch('/api/epg/content_type/list');
+      const data = await response.json();
+      setContentTypes(data.entries || []);
+    } catch (error) {
+      console.error('Failed to load content types:', error);
+    }
+  };
+
+  const loadEvents = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        start: (page * rowsPerPage).toString(),
+        limit: rowsPerPage.toString(),
+      });
+      
+      if (searchTitle) params.append('title', searchTitle);
+      if (selectedChannel) params.append('channel', selectedChannel);
+      if (selectedTag) params.append('tag', selectedTag);
+      if (contentType) params.append('contentType', contentType);
+      if (duration) params.append('duration_min', duration);
+      if (newOnly) params.append('new', '1');
+      if (fulltext) params.append('fulltext', '1');
+
+      const response = await fetch(`/api/epg/events/grid?${params}`);
+      const data = await response.json();
+      setEvents(data.entries || []);
+    } catch (error) {
+      console.error('Failed to load EPG events:', error);
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadEvents();
+  }, [page, rowsPerPage, searchTitle, selectedChannel, selectedTag, contentType, duration, newOnly, fulltext]);
+
+  const handleResetFilters = () => {
+    setSearchTitle('');
+    setSelectedChannel('');
+    setSelectedTag('');
+    setContentType('');
+    setDuration('');
+    setNewOnly(false); 
+    setFulltext(false);
+    setPage(0);
+  };
+
+  const handleWatchTV = (event: EPGEvent) => {
+    setSelectedEvent(event);
+    setWatchTVDialogOpen(true);
+  };
+
+  const handleCreateAutoRec = (event: EPGEvent) => {
+    setSelectedEvent(event);
+    setCreateAutoRecDialogOpen(true);
+  };
+
+  const handleProgramDetails = (event: EPGEvent) => {
+    setSelectedEvent(event);
+    setProgramDetailsDialogOpen(true);
+  };
+
+  const handleRecord = async (event: EPGEvent) => {
+    try {
+      await fetch('/api/dvr/entry/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: event.eventId })
+      });
+      loadEvents(); // Refresh to show recording status
+    } catch (error) {
+      console.error('Failed to create recording:', error);
+    }
+  };
+
+  const handleStopRecording = async (event: EPGEvent) => {
+    try {
+      if (event.dvrUuid) {
+        await fetch(`/api/dvr/entry/stop`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uuid: event.dvrUuid })
+        });
+        loadEvents(); // Refresh to show updated status
+      }
+    } catch (error) {
+      console.error('Failed to stop recording:', error);
+    }
+  };
+
+  const formatDateTime = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleString();
+  };
+
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}:${minutes.toString().padStart(2, '0')}`;
+  };
+
+  const getRecordingStatus = (event: EPGEvent) => {
+    if (event.recording) return { label: 'Recording', color: 'error' as const };
+    if (event.scheduled) return { label: 'Scheduled', color: 'warning' as const };
+    if (event.dvrState) return { label: event.dvrState, color: 'primary' as const };
+    return null;
+  };
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [watchTVOpen, setWatchTVOpen] = useState(false);
   const [createAutoRecOpen, setCreateAutoRecOpen] = useState(false);

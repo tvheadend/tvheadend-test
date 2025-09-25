@@ -66,7 +66,7 @@ modern_ui_route(http_connection_t *hc, const char *remain, void *opaque)
 void
 modern_ui_start(void)
 {
-  http_path_add("/modern.html",         NULL, modern_ui_main,         ACCESS_WEB_INTERFACE);
+  http_path_add("/modern/index.html",    NULL, modern_ui_main,         ACCESS_WEB_INTERFACE);
   http_path_add("/modern/",             NULL, modern_ui_route,        ACCESS_WEB_INTERFACE);
   http_path_add("/modern",              NULL, modern_ui_route,        ACCESS_WEB_INTERFACE);
 }
