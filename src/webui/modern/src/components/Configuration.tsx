@@ -55,10 +55,18 @@ import {
 import AccessEntriesSection from './sections/AccessEntriesSection';
 import PasswordsSection from './sections/PasswordsSection';
 import IPBlockingSection from './sections/IPBlockingSection';
+import ImageCacheSection from './sections/ImageCacheSection';
+import NetworksSection from './sections/NetworksSection';
+import MuxesSection from './sections/MuxesSection';
+import ServicesSection from './sections/ServicesSection';
+import ChannelsSection from './sections/ChannelsSection';
+import ChannelTagsSection from './sections/ChannelTagsSection';
+import BouquetsSection from './sections/BouquetsSection';
+import EPGGrabberModulesSection from './sections/EPGGrabberModulesSection';
+import StreamProfilesSection from './sections/StreamProfilesSection';
+import DVRProfilesSection from './sections/DVRProfilesSection';
+import TimeshiftSection from './sections/TimeshiftSection';
 // import BaseConfigSection from './sections/BaseConfigSection';
-// import NetworksSection from './sections/NetworksSection';  
-// import ChannelsSection from './sections/ChannelsSection';
-// import ChannelTagsSection from './sections/ChannelTagsSection';
 
 interface ConfigSection {
   id: string;
@@ -527,12 +535,23 @@ function Configuration() {
               </Card>
             );
           
+          case 'imagecache':
+            return <ImageCacheSection />;
+          case 'satip-server':
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>SAT&gt;IP Server</Typography>
+                  <Typography variant="body2">SAT&gt;IP server configuration will be implemented here.</Typography>
+                </CardContent>
+              </Card>
+            );
           default:
             return (
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
-                    {selectedSubsection === 'imagecache' ? 'Image Cache Settings' : 'SAT>IP Server Settings'}
+                    {selectedSubsection === 'imagecache' ? 'Image Cache Settings' : 'SAT&gt;IP Server Settings'}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
                     Configure {selectedSubsection === 'imagecache' ? 'image caching for channel logos and program artwork' : 'SAT>IP server functionality'}.
@@ -552,6 +571,135 @@ function Configuration() {
             return <IPBlockingSection />;
           default:
             return <AccessEntriesSection />;
+        }
+        
+      case 'dvb-inputs':
+        switch (selectedSubsection) {
+          case 'tv-adapters':
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>TV Adapters</Typography>
+                  <Typography variant="body2">TV adapter configuration will be implemented here.</Typography>
+                </CardContent>
+              </Card>
+            );
+          case 'networks':
+            return <NetworksSection />;
+          case 'muxes':
+            return <MuxesSection />;
+          case 'services':
+            return <ServicesSection />;  
+          case 'mux-schedulers':
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Mux Schedulers</Typography>
+                  <Typography variant="body2">Mux scheduler configuration will be implemented here.</Typography>
+                </CardContent>
+              </Card>
+            );
+          default:
+            return <NetworksSection />;
+        }
+        
+      case 'channel-epg':
+        switch (selectedSubsection) {
+          case 'channels':
+            return <ChannelsSection />;
+          case 'channel-tags':
+            return <ChannelTagsSection />;
+          case 'bouquets':
+            return <BouquetsSection />;
+          case 'epg-grabber-channels':
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>EPG Grabber Channels</Typography>
+                  <Typography variant="body2">EPG grabber channel configuration will be implemented here.</Typography>
+                </CardContent>
+              </Card>
+            );
+          case 'epg-grabber-modules':
+            return <EPGGrabberModulesSection />;
+          case 'rating-labels':
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Rating Labels</Typography>
+                  <Typography variant="body2">Rating label configuration will be implemented here.</Typography>
+                </CardContent>
+              </Card>
+            );
+          default:
+            return <ChannelsSection />;
+        }
+        
+      case 'stream':
+        switch (selectedSubsection) {
+          case 'stream-profiles':
+            return <StreamProfilesSection />;
+          case 'codec-profiles':
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Codec Profiles</Typography>
+                  <Typography variant="body2">Codec profile configuration will be implemented here.</Typography>
+                </CardContent>
+              </Card>
+            );
+          case 'esfilters':
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Elementary Stream Filters</Typography>
+                  <Typography variant="body2">ES filter configuration will be implemented here.</Typography>
+                </CardContent>
+              </Card>
+            );
+          default:
+            return <StreamProfilesSection />;
+        }
+        
+      case 'recording':
+        switch (selectedSubsection) {
+          case 'dvr-profiles':
+            return <DVRProfilesSection />;
+          case 'timeshift':
+            return <TimeshiftSection />;
+          default:
+            return <DVRProfilesSection />;
+        }
+        
+      case 'debugging':
+        switch (selectedSubsection) {
+          case 'tvhlog':
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Tvheadend Log</Typography>
+                  <Typography variant="body2">Log configuration will be implemented here.</Typography>
+                </CardContent>
+              </Card>
+            );
+          case 'memory-info':
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Memory Information</Typography>
+                  <Typography variant="body2">Memory information will be implemented here.</Typography>
+                </CardContent>
+              </Card>
+            );
+          default:
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Debugging</Typography>
+                  <Typography variant="body2">Debug configuration options.</Typography>
+                </CardContent>
+              </Card>
+            );
         }
         
       default:
