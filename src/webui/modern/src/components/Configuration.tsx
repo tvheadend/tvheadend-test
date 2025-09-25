@@ -59,13 +59,22 @@ import ImageCacheSection from './sections/ImageCacheSection';
 import NetworksSection from './sections/NetworksSection';
 import MuxesSection from './sections/MuxesSection';
 import ServicesSection from './sections/ServicesSection';
+import MuxSchedulersSection from './sections/MuxSchedulersSection';
 import ChannelsSection from './sections/ChannelsSection';
 import ChannelTagsSection from './sections/ChannelTagsSection';
 import BouquetsSection from './sections/BouquetsSection';
+import EPGGrabberChannelsSection from './sections/EPGGrabberChannelsSection';
 import EPGGrabberModulesSection from './sections/EPGGrabberModulesSection';
+import RatingLabelsSection from './sections/RatingLabelsSection';
 import StreamProfilesSection from './sections/StreamProfilesSection';
+import CodecProfilesSection from './sections/CodecProfilesSection';
+import ESFiltersSection from './sections/ESFiltersSection';
 import DVRProfilesSection from './sections/DVRProfilesSection';
 import TimeshiftSection from './sections/TimeshiftSection';
+import TVHeadendLogSection from './sections/TVHeadendLogSection';
+import MemoryInfoSection from './sections/MemoryInfoSection';
+import TVAdaptersSection from './sections/TVAdaptersSection';
+import CAClientSection from './sections/CAClientSection';
 // import BaseConfigSection from './sections/BaseConfigSection';
 
 interface ConfigSection {
@@ -199,6 +208,14 @@ function Configuration() {
       subsections: [
         { id: 'dvr-profiles', label: 'Digital Video Recorder Profiles', icon: <RecordingIcon /> },
         { id: 'timeshift', label: 'Timeshift', icon: <RecordingIcon /> },
+      ]
+    },
+    {
+      id: 'cas',
+      label: 'CAs',
+      icon: <SecurityIcon />,
+      subsections: [
+        { id: 'ca-clients', label: 'CA Clients', icon: <SecurityIcon /> },
       ]
     },
     {
@@ -576,14 +593,7 @@ function Configuration() {
       case 'dvb-inputs':
         switch (selectedSubsection) {
           case 'tv-adapters':
-            return (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>TV Adapters</Typography>
-                  <Typography variant="body2">TV adapter configuration will be implemented here.</Typography>
-                </CardContent>
-              </Card>
-            );
+            return <TVAdaptersSection />;
           case 'networks':
             return <NetworksSection />;
           case 'muxes':
@@ -591,14 +601,7 @@ function Configuration() {
           case 'services':
             return <ServicesSection />;  
           case 'mux-schedulers':
-            return (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>Mux Schedulers</Typography>
-                  <Typography variant="body2">Mux scheduler configuration will be implemented here.</Typography>
-                </CardContent>
-              </Card>
-            );
+            return <MuxSchedulersSection />;
           default:
             return <NetworksSection />;
         }
@@ -612,25 +615,11 @@ function Configuration() {
           case 'bouquets':
             return <BouquetsSection />;
           case 'epg-grabber-channels':
-            return (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>EPG Grabber Channels</Typography>
-                  <Typography variant="body2">EPG grabber channel configuration will be implemented here.</Typography>
-                </CardContent>
-              </Card>
-            );
+            return <EPGGrabberChannelsSection />;
           case 'epg-grabber-modules':
             return <EPGGrabberModulesSection />;
           case 'rating-labels':
-            return (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>Rating Labels</Typography>
-                  <Typography variant="body2">Rating label configuration will be implemented here.</Typography>
-                </CardContent>
-              </Card>
-            );
+            return <RatingLabelsSection />;
           default:
             return <ChannelsSection />;
         }
@@ -640,23 +629,9 @@ function Configuration() {
           case 'stream-profiles':
             return <StreamProfilesSection />;
           case 'codec-profiles':
-            return (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>Codec Profiles</Typography>
-                  <Typography variant="body2">Codec profile configuration will be implemented here.</Typography>
-                </CardContent>
-              </Card>
-            );
+            return <CodecProfilesSection />;
           case 'esfilters':
-            return (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>Elementary Stream Filters</Typography>
-                  <Typography variant="body2">ES filter configuration will be implemented here.</Typography>
-                </CardContent>
-              </Card>
-            );
+            return <ESFiltersSection />;
           default:
             return <StreamProfilesSection />;
         }
@@ -671,26 +646,20 @@ function Configuration() {
             return <DVRProfilesSection />;
         }
         
+      case 'cas':
+        switch (selectedSubsection) {
+          case 'ca-clients':
+            return <CAClientSection />;
+          default:
+            return <CAClientSection />;
+        }
+        
       case 'debugging':
         switch (selectedSubsection) {
           case 'tvhlog':
-            return (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>Tvheadend Log</Typography>
-                  <Typography variant="body2">Log configuration will be implemented here.</Typography>
-                </CardContent>
-              </Card>
-            );
+            return <TVHeadendLogSection />;
           case 'memory-info':
-            return (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>Memory Information</Typography>
-                  <Typography variant="body2">Memory information will be implemented here.</Typography>
-                </CardContent>
-              </Card>
-            );
+            return <MemoryInfoSection />;
           default:
             return (
               <Card>
