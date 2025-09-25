@@ -8,17 +8,13 @@ import {
   ListItemButton,
   ListItemText,
   Grid,
-  TextField,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Checkbox,
-  FormControlLabel,
   Button,
   Card,
   CardContent,
-  FormGroup,
   Toolbar,
   Dialog,
   DialogTitle,
@@ -46,10 +42,6 @@ import {
 } from '@mui/icons-material';
 import { 
   loadLanguages, 
-  getThemeOptions,
-  getUILevelOptions,
-  getPageSizeOptions,
-  SelectOption,
   LanguageOption
 } from '../utils/api';
 import AccessEntriesSection from './sections/AccessEntriesSection';
@@ -112,12 +104,7 @@ function Configuration() {
   const [channelSources, setChannelSources] = useState(false);
   const [kodiFormatting, setKodiFormatting] = useState(false);
   
-  // EPG Settings
-  const [iptvThreads, setIptvThreads] = useState('2');
-  const [parseHbbTV, setParseHbbTV] = useState(false);
-  
   // Language selection states
-  const [selectedLanguages] = useState<LanguageOption[]>([]);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
   const [wizardLanguage, setWizardLanguage] = useState('');
@@ -126,9 +113,6 @@ function Configuration() {
   const [epgLang3, setEpgLang3] = useState('');
 
   const [languages, setLanguages] = useState<LanguageOption[]>([]);
-  const [themes, setThemes] = useState<SelectOption[]>([]);
-  const [uiLevels, setUILevels] = useState<SelectOption[]>([]);
-  const [pageSizes, setPageSizes] = useState<SelectOption[]>([]);
 
   // Load dynamic data from APIs
   const loadDynamicData = async () => {
@@ -136,11 +120,6 @@ function Configuration() {
       // Load languages - we can use any of the three language endpoints
       const languageData = await loadLanguages();
       setLanguages(languageData);
-      
-      // Set static options that are hardcoded in the server
-      setThemes(getThemeOptions());
-      setUILevels(getUILevelOptions());
-      setPageSizes(getPageSizeOptions());
     } catch (error) {
       console.error('Failed to load configuration data:', error);
     }
@@ -357,195 +336,6 @@ function Configuration() {
         switch (selectedSubsection) {
           case 'base':
             return <BaseConfigSection />;
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Server Name"
-                        value={serverName}
-                        onChange={(e) => setServerName(e.target.value)}
-                        margin="normal"
-                      />
-                    </Grid>
-                  </Grid>
-                  
-                  <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                    Web Interface Settings
-                  </Typography>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                      <FormControl fullWidth margin="normal">
-                        <InputLabel>Default Language</InputLabel>
-                        <Select
-                          value={defaultLanguage}
-                          onChange={(e) => setDefaultLanguage(e.target.value)}
-                          label="Default Language"
-                        >
-                          {languages.map((lang) => (
-                            <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
-                              {lang.val || lang.name || lang.identifier}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <FormControl fullWidth margin="normal">
-                        <InputLabel>Theme</InputLabel>
-                        <Select
-                          value={theme}
-                          onChange={(e) => setTheme(e.target.value)}
-                          label="Theme"
-                        >
-                          {themes.map((themeOption) => (
-                            <MenuItem key={themeOption.key} value={themeOption.key}>
-                              {themeOption.val}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <FormControl fullWidth margin="normal">
-                        <InputLabel>Items per page</InputLabel>
-                        <Select
-                          value={itemsPerPage}
-                          onChange={(e) => setItemsPerPage(e.target.value)}
-                          label="Items per page"
-                        >
-                          {pageSizes.map((size) => (
-                            <MenuItem key={size.key} value={size.key}>
-                              {size.val}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <FormControl fullWidth margin="normal">
-                        <InputLabel>Default view level</InputLabel>
-                        <Select
-                          value={defaultViewLevel}
-                          onChange={(e) => setDefaultViewLevel(e.target.value)}
-                          label="Default view level"
-                        >
-                          {uiLevels.map((level) => (
-                            <MenuItem key={level.key} value={level.key}>
-                              {level.val}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                  </Grid>
-                  
-                  <FormGroup>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={channelNumbers}
-                          onChange={(e) => setChannelNumbers(e.target.checked)}
-                        />
-                      }
-                      label="Show channel numbers"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={channelSources}
-                          onChange={(e) => setChannelSources(e.target.checked)}
-                        />
-                      }
-                      label="Show channel sources"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={kodiFormatting}
-                          onChange={(e) => setKodiFormatting(e.target.checked)}
-                        />
-                      }
-                      label="Use Kodi formatting"
-                    />
-                  </FormGroup>
-                  
-                  <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                    Advanced EPG Settings
-                  </Typography>
-                  
-                  <Grid container spacing={2}>
-                    <Grid item xs={5}>
-                      <Typography variant="subtitle1">Available Languages</Typography>
-                      <Paper sx={{ height: 200, overflow: 'auto', p: 1 }}>
-                        <List dense>
-                          {languages.filter(lang => !selectedLanguages.find(sl => (sl.identifier || sl.key || sl.id) === (lang.identifier || lang.key || lang.id))).map((lang) => (
-                            <ListItem key={lang.identifier || lang.key || lang.id} disablePadding>
-                              <ListItemButton>
-                                <ListItemText primary={lang.val || lang.name || lang.identifier} secondary={(lang.identifier || lang.key || lang.id || '').toUpperCase()} />
-                              </ListItemButton>
-                            </ListItem>
-                          ))}
-                        </List>
-                      </Paper>
-                    </Grid>
-                    
-                    <Grid item xs={2} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1 }}>
-                      <Button variant="outlined">→</Button>
-                      <Button variant="outlined">←</Button>
-                      <Button variant="outlined">↑</Button>
-                      <Button variant="outlined">↓</Button>
-                      <Button variant="outlined">⤴</Button>
-                      <Button variant="outlined">⤵</Button>
-                    </Grid>
-                    
-                    <Grid item xs={5}>
-                      <Typography variant="subtitle1">Selected Languages</Typography>
-                      <Paper sx={{ height: 200, overflow: 'auto', p: 1 }}>
-                        <List dense>
-                          {selectedLanguages.map((lang) => (
-                            <ListItem key={lang.identifier || lang.key || lang.id} disablePadding>
-                              <ListItemButton>
-                                <ListItemText primary={lang.val || lang.name || lang.identifier} secondary={(lang.identifier || lang.key || lang.id || '').toUpperCase()} />
-                              </ListItemButton>
-                            </ListItem>
-                          ))}
-                        </List>
-                      </Paper>
-                    </Grid>
-                  </Grid>
-                  
-                  <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                    Miscellaneous Settings
-                  </Typography>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="IPTV scanning threads"
-                        type="number"
-                        value={iptvThreads}
-                        onChange={(e) => setIptvThreads(e.target.value)}
-                        margin="normal"
-                      />
-                    </Grid>
-                  </Grid>
-                  
-                  <FormGroup>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={parseHbbTV}
-                          onChange={(e) => setParseHbbTV(e.target.checked)}
-                        />
-                      }
-                      label="Parse HbbTV Application Information"
-                    />
-                  </FormGroup>
-                </CardContent>
-              </Card>
-            );
           
           case 'imagecache':
             return <ImageCacheSection />;
