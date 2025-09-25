@@ -33,6 +33,10 @@ import DVR from './components/DVR';
 import Configuration from './components/Configuration';
 import Status from './components/Status';
 import About from './components/About';
+import HelpSystem from './components/common/HelpSystem';
+
+// Contexts
+import { HelpProvider, useHelp } from './contexts/HelpContext';
 
 // Theme matching Tvheadend's blue color scheme
 const theme = createTheme({
@@ -62,6 +66,7 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { isHelpOpen, helpPageName, closeHelp } = useHelp();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -179,6 +184,13 @@ function AppContent() {
           <Route path="/status" element={<Status />} />
           <Route path="/about" element={<About />} />
         </Routes>
+
+        {/* Global Help System */}
+        <HelpSystem
+          open={isHelpOpen}
+          onClose={closeHelp}
+          pageName={helpPageName}
+        />
       </Box>
     </Box>
   );
@@ -187,9 +199,11 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <Router>
-        <AppContent />
-      </Router>
+      <HelpProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </HelpProvider>
     </ThemeProvider>
   );
 }

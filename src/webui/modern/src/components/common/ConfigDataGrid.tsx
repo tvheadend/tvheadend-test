@@ -32,7 +32,9 @@ import {
   ArrowUpward as MoveUpIcon,
   ArrowDownward as MoveDownIcon,
   Refresh as RefreshIcon,
+  Help as HelpIcon,
 } from '@mui/icons-material';
+import { useHelp } from '../../contexts/HelpContext';
 
 export interface GridColumn {
   key: string;
@@ -52,6 +54,7 @@ export interface ConfigDataGridProps {
   canDelete?: boolean;
   canMove?: boolean;
   fields?: string[];
+  helpPage?: string; // Help page to show when help button is clicked
 }
 
 const ConfigDataGrid: React.FC<ConfigDataGridProps> = ({
@@ -64,6 +67,7 @@ const ConfigDataGrid: React.FC<ConfigDataGridProps> = ({
   canDelete = true,
   canMove = false,
   fields,
+  helpPage,
 }) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -73,6 +77,7 @@ const ConfigDataGrid: React.FC<ConfigDataGridProps> = ({
     isNew: false
   });
   const [editData, setEditData] = useState<any>({});
+  const { showHelp } = useHelp();
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -235,6 +240,11 @@ const ConfigDataGrid: React.FC<ConfigDataGridProps> = ({
           <IconButton onClick={loadData}>
             <RefreshIcon />
           </IconButton>
+          {helpPage && (
+            <IconButton onClick={() => showHelp(helpPage)}>
+              <HelpIcon />
+            </IconButton>
+          )}
           {canAdd && (
             <Button startIcon={<AddIcon />} onClick={handleAdd}>
               Add
