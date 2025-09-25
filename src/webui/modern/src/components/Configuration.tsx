@@ -52,6 +52,7 @@ import {
   SelectOption,
   LanguageOption
 } from '../utils/api';
+import AccessEntriesSection from './sections/AccessEntriesSection';
 
 interface ConfigSection {
   id: string;
@@ -533,6 +534,32 @@ function Configuration() {
                 </CardContent>
               </Card>
             );
+        }
+        
+      case 'users':
+        switch (selectedSubsection) {
+          case 'access-entries':
+            return <AccessEntriesSection />;
+          case 'passwords':
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Passwords</Typography>
+                  <Typography variant="body2">Password management functionality will be implemented here.</Typography>
+                </CardContent>
+              </Card>
+            );
+          case 'ip-blocking':
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>IP Blocking Records</Typography>
+                  <Typography variant="body2">IP blocking functionality will be implemented here.</Typography>
+                </CardContent>
+              </Card>
+            );
+          default:
+            return <AccessEntriesSection />;
         }
         
       default:
