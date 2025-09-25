@@ -77,7 +77,19 @@ const ConfigDataGrid: React.FC<ConfigDataGridProps> = ({
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/${url}`);
+      // Use POST request with grid parameters like the old UI
+      const response = await fetch(`/api/${url}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          sort: 'prefix',
+          dir: 'ASC',
+          groupBy: 'false',
+          groupDir: 'ASC',
+          start: '0',
+          limit: '999999'
+        })
+      });
       const result = await response.json();
       setData(result.entries || []);
     } catch (error) {

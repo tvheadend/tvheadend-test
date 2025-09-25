@@ -75,6 +75,7 @@ import TVHeadendLogSection from './sections/TVHeadendLogSection';
 import MemoryInfoSection from './sections/MemoryInfoSection';
 import TVAdaptersSection from './sections/TVAdaptersSection';
 import CAClientSection from './sections/CAClientSection';
+import BaseConfigSection from './sections/BaseConfigSection';
 // import BaseConfigSection from './sections/BaseConfigSection';
 
 interface ConfigSection {
@@ -355,13 +356,7 @@ function Configuration() {
       case 'general':
         switch (selectedSubsection) {
           case 'base':
-            return (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Server Settings
-                  </Typography>
-                  <Grid container spacing={3}>
+            return <BaseConfigSection />;
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
