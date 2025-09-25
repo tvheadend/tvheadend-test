@@ -242,6 +242,7 @@ endef
 all:
 	$(MAKE) -f $(IAM) WEBUI=std   compile-std
 	$(MAKE) -f $(IAM) WEBUI=debug compile-debug
+	$(MAKE) -f $(IAM) compile-modern
 
 $(WEBDIR)/extjs-std.c: $(JAVASCRIPT_SRC) $(CSS_SRC)
 	$(VV)printf 'extjs_lcss(hq, "redir/theme.css");\n' > $@
@@ -316,6 +317,17 @@ intl/js/tvheadend.js.pot:
 src/webui/static/intl/tvh.%.js.gz: intl/js/tvheadend.js.%.po
 	$(call go-po,$@,$<)
 
+.PHONY: compile-modern
+compile-modern:
+	@echo "Building modern React interface..."
+	@if [ -d "$(WEBDIR)/modern" ]; then \
+		cd $(WEBDIR)/modern && npm install && npm run build; \
+		mkdir -p ../static/modern; \
+		cp -r build/* ../static/modern/ 2>/dev/null || true; \
+	fi
+	@python3 support/generate_modern_ui.py
+	@echo "Modern interface build completed"
+
 .PHONY:
 clean:
 	rm -f $(foreach f,tvh.js tvh.css tvh-tv.js tvh-tv.css,\
@@ -324,3 +336,7 @@ clean:
 		$(WEBDIR)/$(ROOTPATH)/$(f).tmp2) \
               $(WEBDIR)/extjs-std.c $(WEBDIR)/extjs-tv-std.c \
               $(WEBDIR)/extjs-debug.c $(WEBDIR)/extjs-tv-debug.c
+	@if [ -d "$(WEBDIR)/modern" ]; then \
+		cd $(WEBDIR)/modern && rm -rf build node_modules; \
+	fi
+	@rm -rf $(WEBDIR)/static/modern/*
