@@ -200,7 +200,7 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <HelpProvider>
-        <Router>
+        <Router basename="/modern">
           <AppContent />
         </Router>
       </HelpProvider>
