@@ -28,6 +28,16 @@ import {
   FiberManualRecord as RecordIcon,
   Help as HelpIcon,
 } from '@mui/icons-material';
+import { 
+  loadChannels, 
+  loadChannelTags, 
+  loadContentTypes,
+  loadChannelCategories,
+  getDurationOptions,
+  ChannelOption,
+  TagOption,
+  SelectOption
+} from '../utils/api';
 
 interface EPGEvent {
   eventId: string;
@@ -72,6 +82,7 @@ function EPG() {
   const [selectedChannel, setSelectedChannel] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
   const [contentType, setContentType] = useState('');
+  const [category, setCategory] = useState('');
   const [duration, setDuration] = useState('');
   const [newOnly, setNewOnly] = useState(false);
   const [fulltext, setFulltext] = useState(false);
@@ -80,37 +91,28 @@ function EPG() {
   const [selectedEvent, setSelectedEvent] = useState<EPGEvent | null>(null);
 
   // Data states
-  const [channels, setChannels] = useState<Array<{uuid: string, name: string}>>([]);
-  const [tags, setTags] = useState<Array<{uuid: string, name: string}>>([]);
-  const [contentTypes, setContentTypes] = useState<Array<{key: number, val: string}>>([]);
+  const [channels, setChannels] = useState<ChannelOption[]>([]);
+  const [tags, setTags] = useState<TagOption[]>([]);
+  const [contentTypes, setContentTypes] = useState<SelectOption[]>([]);
+  const [categories, setCategories] = useState<SelectOption[]>([]);
+  const [durations] = useState<SelectOption[]>(getDurationOptions());
 
-  const loadChannels = async () => {
+  const loadDynamicData = async () => {
     try {
-      const response = await fetch('/api/channel/list');
-      const data = await response.json();
-      setChannels(data.entries || []);
+      // Load all dynamic EPG filter data in parallel
+      const [channelData, tagData, contentTypeData, categoryData] = await Promise.all([
+        loadChannels({ numbers: true, sources: false }),
+        loadChannelTags(),
+        loadContentTypes(false), // Load basic content types
+        loadChannelCategories(),
+      ]);
+      
+      setChannels(channelData);
+      setTags(tagData);
+      setContentTypes(contentTypeData);
+      setCategories(categoryData);
     } catch (error) {
-      console.error('Failed to load channels:', error);
-    }
-  };
-
-  const loadTags = async () => {
-    try {
-      const response = await fetch('/api/channeltag/list');
-      const data = await response.json();
-      setTags(data.entries || []);
-    } catch (error) {
-      console.error('Failed to load channel tags:', error);
-    }
-  };
-
-  const loadContentTypes = async () => {
-    try {
-      const response = await fetch('/api/epg/content_type/list');
-      const data = await response.json();
-      setContentTypes(data.entries || []);
-    } catch (error) {
-      console.error('Failed to load content types:', error);
+      console.error('Failed to load EPG dynamic data:', error);
     }
   };
 
@@ -126,6 +128,7 @@ function EPG() {
       if (selectedChannel) params.append('channel', selectedChannel);
       if (selectedTag) params.append('channeltag', selectedTag);
       if (contentType) params.append('contentType', contentType);
+      if (category) params.append('category', category);
       if (duration) params.append('duration_min', duration);
       if (newOnly) params.append('new', '1');
       if (fulltext) params.append('fulltext', '1');
@@ -140,13 +143,11 @@ function EPG() {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchTitle, selectedChannel, selectedTag, contentType, duration, newOnly, fulltext]);
+  }, [page, rowsPerPage, searchTitle, selectedChannel, selectedTag, contentType, category, duration, newOnly, fulltext]);
 
   // Load initial data
   useEffect(() => {
-    loadChannels();
-    loadTags();
-    loadContentTypes();
+    loadDynamicData();
   }, []);
 
   // Load events when filters change
@@ -163,6 +164,7 @@ function EPG() {
     setSelectedChannel('');
     setSelectedTag('');
     setContentType('');
+    setCategory('');
     setDuration('');
     setNewOnly(false); 
     setFulltext(false);
@@ -270,6 +272,39 @@ function EPG() {
                 {contentTypes.map((type) => (
                   <MenuItem key={type.key} value={type.key.toString()}>
                     {type.val}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                label="Category"
+              >
+                <MenuItem value="">All</MenuItem>
+                {categories.map((cat) => (
+                  <MenuItem key={cat.key} value={cat.key.toString()}>
+                    {cat.val}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Duration</InputLabel>
+              <Select
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                label="Duration"
+              >
+                {durations.map((dur) => (
+                  <MenuItem key={dur.key} value={dur.key.toString()}>
+                    {dur.val}
                   </MenuItem>
                 ))}
               </Select>

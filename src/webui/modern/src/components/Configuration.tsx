@@ -44,17 +44,20 @@ import {
   BugReport as DebugIcon,
   AutoAwesome as WizardIcon,
 } from '@mui/icons-material';
+import { 
+  loadLanguages, 
+  getThemeOptions,
+  getUILevelOptions,
+  getPageSizeOptions,
+  SelectOption,
+  LanguageOption
+} from '../utils/api';
 
 interface ConfigSection {
   id: string;
   label: string;
   icon: React.ReactNode;
   subsections?: ConfigSection[];
-}
-
-interface LanguageItem {
-  code: string;
-  name: string;
 }
 
 interface ServerInfo {
@@ -79,7 +82,7 @@ function Configuration() {
   const [defaultLanguage, setDefaultLanguage] = useState('');
   const [theme, setTheme] = useState('Blue');
   const [itemsPerPage, setItemsPerPage] = useState('50');
-  const [defaultViewLevel, setDefaultViewLevel] = useState('Basic');
+  const [defaultViewLevel, setDefaultViewLevel] = useState('0');
   const [channelNumbers, setChannelNumbers] = useState(false);
   const [channelSources, setChannelSources] = useState(false);
   const [kodiFormatting, setKodiFormatting] = useState(false);
@@ -89,7 +92,7 @@ function Configuration() {
   const [parseHbbTV, setParseHbbTV] = useState(false);
   
   // Language selection states
-  const [selectedLanguages] = useState<LanguageItem[]>([]);
+  const [selectedLanguages] = useState<LanguageOption[]>([]);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
   const [wizardLanguage, setWizardLanguage] = useState('');
@@ -97,29 +100,24 @@ function Configuration() {
   const [epgLang2, setEpgLang2] = useState('');
   const [epgLang3, setEpgLang3] = useState('');
 
-  const [languages, setLanguages] = useState<LanguageItem[]>([]);
+  const [languages, setLanguages] = useState<LanguageOption[]>([]);
+  const [themes, setThemes] = useState<SelectOption[]>([]);
+  const [uiLevels, setUILevels] = useState<SelectOption[]>([]);
+  const [pageSizes, setPageSizes] = useState<SelectOption[]>([]);
 
-  // Load real languages from API
-  const loadLanguages = async () => {
+  // Load dynamic data from APIs
+  const loadDynamicData = async () => {
     try {
-      const response = await fetch('/api/language/list');
-      const data = await response.json();
-      if (data.entries) {
-        const languageList = data.entries.map((lang: any) => ({
-          code: lang.identifier || lang.key || lang.id,
-          name: lang.val || lang.name || lang.identifier,
-        }));
-        setLanguages(languageList);
-      }
+      // Load languages - we can use any of the three language endpoints
+      const languageData = await loadLanguages();
+      setLanguages(languageData);
+      
+      // Set static options that are hardcoded in the server
+      setThemes(getThemeOptions());
+      setUILevels(getUILevelOptions());
+      setPageSizes(getPageSizeOptions());
     } catch (error) {
-      console.error('Failed to load languages:', error);
-      // Fallback to basic languages if API fails
-      setLanguages([
-        { code: 'en', name: 'English' },
-        { code: 'de', name: 'German' },
-        { code: 'fr', name: 'French' },
-        { code: 'es', name: 'Spanish' },
-      ]);
+      console.error('Failed to load configuration data:', error);
     }
   };
 
@@ -202,7 +200,7 @@ function Configuration() {
   useEffect(() => {
     loadServerInfo();
     loadConfiguration();
-    loadLanguages();
+    loadDynamicData();
   }, []);
 
   const loadServerInfo = async () => {
@@ -233,7 +231,7 @@ function Configuration() {
         setDefaultLanguage(config.language_ui || '');
         setTheme(config.theme_ui || 'Blue');
         setItemsPerPage(String(config.page_size_ui || 50));
-        setDefaultViewLevel(config.uilevel === 0 ? 'Basic' : config.uilevel === 1 ? 'Advanced' : 'Expert');
+        setDefaultViewLevel(String(config.uilevel ?? 0));
         setChannelNumbers(config.chname_num !== false);
         setChannelSources(config.chname_src === true);
         setKodiFormatting(config.label_formatting === true);
@@ -245,7 +243,7 @@ function Configuration() {
 
   const saveConfiguration = async () => {
     try {
-      const uilevel = defaultViewLevel === 'Basic' ? 0 : defaultViewLevel === 'Advanced' ? 1 : 2;
+      const uilevel = parseInt(defaultViewLevel) || 0;
       
       const configData = {
         uuid: serverInfo?.uuid || '',
@@ -356,8 +354,8 @@ function Configuration() {
                           label="Default Language"
                         >
                           {languages.map((lang) => (
-                            <MenuItem key={lang.code} value={lang.code}>
-                              {lang.name}
+                            <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
+                              {lang.val || lang.name || lang.identifier}
                             </MenuItem>
                           ))}
                         </Select>
@@ -372,22 +370,30 @@ function Configuration() {
                           onChange={(e) => setTheme(e.target.value)}
                           label="Theme"
                         >
-                          <MenuItem value="Blue">Blue</MenuItem>
-                          <MenuItem value="Gray">Gray</MenuItem>
-                          <MenuItem value="Access">Access</MenuItem>
+                          {themes.map((themeOption) => (
+                            <MenuItem key={themeOption.key} value={themeOption.key}>
+                              {themeOption.val}
+                            </MenuItem>
+                          ))}
                         </Select>
                       </FormControl>
                     </Grid>
                     
                     <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Items per page"
-                        type="number"
-                        value={itemsPerPage}
-                        onChange={(e) => setItemsPerPage(e.target.value)}
-                        margin="normal"
-                      />
+                      <FormControl fullWidth margin="normal">
+                        <InputLabel>Items per page</InputLabel>
+                        <Select
+                          value={itemsPerPage}
+                          onChange={(e) => setItemsPerPage(e.target.value)}
+                          label="Items per page"
+                        >
+                          {pageSizes.map((size) => (
+                            <MenuItem key={size.key} value={size.key}>
+                              {size.val}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
                     </Grid>
                     
                     <Grid item xs={12} md={6}>
@@ -398,9 +404,11 @@ function Configuration() {
                           onChange={(e) => setDefaultViewLevel(e.target.value)}
                           label="Default view level"
                         >
-                          <MenuItem value="Basic">Basic</MenuItem>
-                          <MenuItem value="Advanced">Advanced</MenuItem>
-                          <MenuItem value="Expert">Expert</MenuItem>
+                          {uiLevels.map((level) => (
+                            <MenuItem key={level.key} value={level.key}>
+                              {level.val}
+                            </MenuItem>
+                          ))}
                         </Select>
                       </FormControl>
                     </Grid>
@@ -445,10 +453,10 @@ function Configuration() {
                       <Typography variant="subtitle1">Available Languages</Typography>
                       <Paper sx={{ height: 200, overflow: 'auto', p: 1 }}>
                         <List dense>
-                          {languages.filter(lang => !selectedLanguages.find(sl => sl.code === lang.code)).map((lang) => (
-                            <ListItem key={lang.code} disablePadding>
+                          {languages.filter(lang => !selectedLanguages.find(sl => (sl.identifier || sl.key || sl.id) === (lang.identifier || lang.key || lang.id))).map((lang) => (
+                            <ListItem key={lang.identifier || lang.key || lang.id} disablePadding>
                               <ListItemButton>
-                                <ListItemText primary={lang.name} secondary={lang.code.toUpperCase()} />
+                                <ListItemText primary={lang.val || lang.name || lang.identifier} secondary={(lang.identifier || lang.key || lang.id || '').toUpperCase()} />
                               </ListItemButton>
                             </ListItem>
                           ))}
@@ -470,9 +478,9 @@ function Configuration() {
                       <Paper sx={{ height: 200, overflow: 'auto', p: 1 }}>
                         <List dense>
                           {selectedLanguages.map((lang) => (
-                            <ListItem key={lang.code} disablePadding>
+                            <ListItem key={lang.identifier || lang.key || lang.id} disablePadding>
                               <ListItemButton>
-                                <ListItemText primary={lang.name} secondary={lang.code.toUpperCase()} />
+                                <ListItemText primary={lang.val || lang.name || lang.identifier} secondary={(lang.identifier || lang.key || lang.id || '').toUpperCase()} />
                               </ListItemButton>
                             </ListItem>
                           ))}
@@ -668,8 +676,8 @@ function Configuration() {
                   label="Interface Language"
                 >
                   {languages.map((lang) => (
-                    <MenuItem key={lang.code} value={lang.code}>
-                      {lang.name}
+                    <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
+                      {lang.val || lang.name || lang.identifier}
                     </MenuItem>
                   ))}
                 </Select>
@@ -695,8 +703,8 @@ function Configuration() {
                       label="Language 1 (highest priority)"
                     >
                       {languages.map((lang) => (
-                        <MenuItem key={lang.code} value={lang.code}>
-                          {lang.name}
+                        <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
+                          {lang.val || lang.name || lang.identifier}
                         </MenuItem>
                       ))}
                     </Select>
@@ -712,8 +720,8 @@ function Configuration() {
                     >
                       <MenuItem value="">None</MenuItem>
                       {languages.map((lang) => (
-                        <MenuItem key={lang.code} value={lang.code}>
-                          {lang.name}
+                        <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
+                          {lang.val || lang.name || lang.identifier}
                         </MenuItem>
                       ))}
                     </Select>
@@ -729,8 +737,8 @@ function Configuration() {
                     >
                       <MenuItem value="">None</MenuItem>
                       {languages.map((lang) => (
-                        <MenuItem key={lang.code} value={lang.code}>
-                          {lang.name}
+                        <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
+                          {lang.val || lang.name || lang.identifier}
                         </MenuItem>
                       ))}
                     </Select>
