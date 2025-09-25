@@ -52,10 +52,21 @@ modern_ui_main(http_connection_t *hc, const char *remain, void *opaque)
 }
 
 /**
+ * Serve modern UI for all routes
+ */
+static int
+modern_ui_route(http_connection_t *hc, const char *remain, void *opaque)
+{
+  return modern_ui_main(hc, remain, opaque);
+}
+
+/**
  * Initialize modern UI
  */
 void
 modern_ui_start(void)
 {
   http_path_add("/modern.html",         NULL, modern_ui_main,         ACCESS_WEB_INTERFACE);
+  http_path_add("/modern/",             NULL, modern_ui_route,        ACCESS_WEB_INTERFACE);
+  http_path_add("/modern",              NULL, modern_ui_route,        ACCESS_WEB_INTERFACE);
 }

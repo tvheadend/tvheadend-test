@@ -25,14 +25,26 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Collapse,
+  ListItemIcon,
+  Divider,
 } from '@mui/material';
 import {
   Save as SaveIcon,
   Undo as UndoIcon,
   Help as HelpIcon,
   Settings as SettingsIcon,
+  Group as GroupIcon,
   Tv as TvIcon,
   SwapVert as SwapIcon,
+  ExpandLess,
+  ExpandMore,
+  Storage as StorageIcon,
+  Security as SecurityIcon,
+  MovieFilter as StreamIcon,
+  VideoCall as RecordingIcon,
+  BugReport as DebugIcon,
+  AutoAwesome as WizardIcon,
 } from '@mui/icons-material';
 
 interface ConfigSection {
@@ -47,10 +59,24 @@ interface LanguageItem {
   name: string;
 }
 
+interface ServerInfo {
+  name: string;
+  version: string;
+  api_version: number;
+  capabilities: string[];
+}
+
 function Configuration() {
   const [selectedSection, setSelectedSection] = useState('general');
   const [selectedSubsection, setSelectedSubsection] = useState('base');
-  const [serverName, setServerName] = useState('Tvheadend');
+  const [expandedSections, setExpandedSections] = useState<string[]>(['general']);
+  
+  // Server data
+  const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
+  const [serverName, setServerName] = useState('');
+  const [originalServerName, setOriginalServerName] = useState('');
+  
+  // Web interface settings
   const [defaultLanguage, setDefaultLanguage] = useState('');
   const [theme, setTheme] = useState('Blue');
   const [itemsPerPage, setItemsPerPage] = useState('50');
@@ -58,6 +84,8 @@ function Configuration() {
   const [channelNumbers, setChannelNumbers] = useState(false);
   const [channelSources, setChannelSources] = useState(false);
   const [kodiFormatting, setKodiFormatting] = useState(false);
+  
+  // EPG Settings
   const [iptvThreads, setIptvThreads] = useState('2');
   const [parseHbbTV, setParseHbbTV] = useState(false);
   
@@ -65,6 +93,11 @@ function Configuration() {
   const [availableLanguages, setAvailableLanguages] = useState<LanguageItem[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<LanguageItem[]>([]);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(0);
+  const [wizardLanguage, setWizardLanguage] = useState('');
+  const [epgLang1, setEpgLang1] = useState('');
+  const [epgLang2, setEpgLang2] = useState('');
+  const [epgLang3, setEpgLang3] = useState('');
 
   const configSections: ConfigSection[] = [
     {
@@ -73,69 +106,372 @@ function Configuration() {
       icon: <SettingsIcon />,
       subsections: [
         { id: 'base', label: 'Base', icon: <SettingsIcon /> },
+        { id: 'imagecache', label: 'Image Cache', icon: <StorageIcon /> },
         { id: 'satip-server', label: 'SAT>IP Server', icon: <TvIcon /> },
       ]
     },
     {
       id: 'users',
       label: 'Users',
-      icon: <SettingsIcon />,
+      icon: <GroupIcon />,
+      subsections: [
+        { id: 'access-entries', label: 'Access Entries', icon: <SecurityIcon /> },
+        { id: 'passwords', label: 'Passwords', icon: <SecurityIcon /> },
+        { id: 'ip-blocking', label: 'IP Blocking Records', icon: <SecurityIcon /> },
+      ]
     },
     {
       id: 'dvb-inputs',
       label: 'DVB Inputs',
       icon: <TvIcon />,
+      subsections: [
+        { id: 'tv-adapters', label: 'TV adapters', icon: <TvIcon /> },
+        { id: 'networks', label: 'Networks', icon: <TvIcon /> },
+        { id: 'muxes', label: 'Muxes', icon: <TvIcon /> },
+        { id: 'services', label: 'Services', icon: <TvIcon /> },
+        { id: 'mux-schedulers', label: 'Mux Schedulers', icon: <TvIcon /> },
+      ]
     },
     {
       id: 'channel-epg',
       label: 'Channel / EPG',
       icon: <TvIcon />,
+      subsections: [
+        { id: 'channels', label: 'Channels', icon: <TvIcon /> },
+        { id: 'channel-tags', label: 'Channel Tags', icon: <TvIcon /> },
+        { id: 'bouquets', label: 'Bouquets', icon: <TvIcon /> },
+        { id: 'epg-grabber-channels', label: 'EPG Grabber Channels', icon: <TvIcon /> },
+        { id: 'epg-grabber-modules', label: 'EPG Grabber Modules', icon: <TvIcon /> },
+        { id: 'rating-labels', label: 'Rating Labels', icon: <TvIcon /> },
+      ]
     },
     {
       id: 'stream',
       label: 'Stream',
-      icon: <TvIcon />,
+      icon: <StreamIcon />,
+      subsections: [
+        { id: 'stream-profiles', label: 'Stream Profiles', icon: <StreamIcon /> },
+        { id: 'codec-profiles', label: 'Codec Profiles', icon: <StreamIcon /> },
+        { id: 'esfilters', label: 'Elementary Stream Filters', icon: <StreamIcon /> },
+      ]
     },
     {
       id: 'recording',
       label: 'Recording',
-      icon: <TvIcon />,
+      icon: <RecordingIcon />,
+      subsections: [
+        { id: 'dvr-profiles', label: 'Digital Video Recorder Profiles', icon: <RecordingIcon /> },
+        { id: 'timeshift', label: 'Timeshift', icon: <RecordingIcon /> },
+      ]
     },
+    {
+      id: 'debugging',
+      label: 'Debugging',
+      icon: <DebugIcon />,
+      subsections: [
+        { id: 'tvhlog', label: 'Configuration', icon: <DebugIcon /> },
+        { id: 'memory-info', label: 'Memory Information Entries', icon: <DebugIcon /> },
+      ]
+    }
   ];
 
-  // Mock language data
+  const languages = [
+    { code: 'en', name: 'English' },
+    { code: 'de', name: 'German' },
+    { code: 'fr', name: 'French' },
+    { code: 'es', name: 'Spanish' },
+    { code: 'it', name: 'Italian' },
+    { code: 'pt', name: 'Portuguese' },
+    { code: 'ru', name: 'Russian' },
+    { code: 'zh', name: 'Chinese' },
+    { code: 'ja', name: 'Japanese' },
+    { code: 'ko', name: 'Korean' },
+    { code: 'ar', name: 'Arabic' },
+    { code: 'hi', name: 'Hindi' },
+    { code: 'nl', name: 'Dutch' },
+    { code: 'sv', name: 'Swedish' },
+    { code: 'no', name: 'Norwegian' },
+    { code: 'da', name: 'Danish' },
+    { code: 'fi', name: 'Finnish' },
+    { code: 'pl', name: 'Polish' },
+    { code: 'cs', name: 'Czech' },
+    { code: 'hu', name: 'Hungarian' },
+    { code: 'ro', name: 'Romanian' },
+    { code: 'bg', name: 'Bulgarian' },
+    { code: 'hr', name: 'Croatian' },
+    { code: 'sk', name: 'Slovak' },
+    { code: 'sl', name: 'Slovenian' },
+    { code: 'et', name: 'Estonian' },
+    { code: 'lv', name: 'Latvian' },
+    { code: 'lt', name: 'Lithuanian' },
+    { code: 'el', name: 'Greek' },
+    { code: 'tr', name: 'Turkish' },
+    { code: 'he', name: 'Hebrew' },
+    { code: 'th', name: 'Thai' },
+    { code: 'vi', name: 'Vietnamese' },
+    { code: 'id', name: 'Indonesian' },
+    { code: 'ms', name: 'Malay' },
+    { code: 'tl', name: 'Filipino' },
+    { code: 'bn', name: 'Bengali' },
+    { code: 'ur', name: 'Urdu' },
+    { code: 'fa', name: 'Persian' },
+    { code: 'sw', name: 'Swahili' },
+    { code: 'ab', name: 'Abkhazian' },
+    { code: 'aa', name: 'Afar' },
+    { code: 'af', name: 'Afrikaans' },
+    { code: 'ak', name: 'Akan' },
+    { code: 'sq', name: 'Albanian' },
+    { code: 'am', name: 'Amharic' },
+    { code: 'an', name: 'Aragonese' },
+    { code: 'hy', name: 'Armenian' },
+    { code: 'as', name: 'Assamese' },
+    { code: 'av', name: 'Avaric' },
+    { code: 'ae', name: 'Avestan' },
+    { code: 'ay', name: 'Aymara' },
+    { code: 'az', name: 'Azerbaijani' },
+    { code: 'bm', name: 'Bambara' },
+    { code: 'ba', name: 'Bashkir' },
+    { code: 'eu', name: 'Basque' },
+    { code: 'be', name: 'Belarusian' },
+    { code: 'bh', name: 'Bihari' },
+    { code: 'bi', name: 'Bislama' },
+    { code: 'bs', name: 'Bosnian' },
+    { code: 'br', name: 'Breton' },
+    { code: 'my', name: 'Burmese' },
+    { code: 'ca', name: 'Catalan' },
+    { code: 'ch', name: 'Chamorro' },
+    { code: 'ce', name: 'Chechen' },
+    { code: 'ny', name: 'Chichewa' },
+    { code: 'cu', name: 'Church Slavic' },
+    { code: 'cv', name: 'Chuvash' },
+    { code: 'kw', name: 'Cornish' },
+    { code: 'co', name: 'Corsican' },
+    { code: 'cr', name: 'Cree' },
+    { code: 'cy', name: 'Welsh' },
+    { code: 'dv', name: 'Divehi' },
+    { code: 'dz', name: 'Dzongkha' },
+    { code: 'eo', name: 'Esperanto' },
+    { code: 'ee', name: 'Ewe' },
+    { code: 'fo', name: 'Faroese' },
+    { code: 'fj', name: 'Fijian' },
+    { code: 'fy', name: 'Western Frisian' },
+    { code: 'ff', name: 'Fulah' },
+    { code: 'gd', name: 'Scottish Gaelic' },
+    { code: 'ga', name: 'Irish' },
+    { code: 'gl', name: 'Galician' },
+    { code: 'lg', name: 'Ganda' },
+    { code: 'ka', name: 'Georgian' },
+    { code: 'gn', name: 'Guarani' },
+    { code: 'gu', name: 'Gujarati' },
+    { code: 'ht', name: 'Haitian' },
+    { code: 'ha', name: 'Hausa' },
+    { code: 'hz', name: 'Herero' },
+    { code: 'ho', name: 'Hiri Motu' },
+    { code: 'is', name: 'Icelandic' },
+    { code: 'io', name: 'Ido' },
+    { code: 'ig', name: 'Igbo' },
+    { code: 'iu', name: 'Inuktitut' },
+    { code: 'ie', name: 'Interlingue' },
+    { code: 'ia', name: 'Interlingua' },
+    { code: 'ik', name: 'Inupiaq' },
+    { code: 'jv', name: 'Javanese' },
+    { code: 'kl', name: 'Kalaallisut' },
+    { code: 'kn', name: 'Kannada' },
+    { code: 'kr', name: 'Kanuri' },
+    { code: 'ks', name: 'Kashmiri' },
+    { code: 'kk', name: 'Kazakh' },
+    { code: 'km', name: 'Central Khmer' },
+    { code: 'ki', name: 'Kikuyu' },
+    { code: 'rw', name: 'Kinyarwanda' },
+    { code: 'ky', name: 'Kirghiz' },
+    { code: 'kv', name: 'Komi' },
+    { code: 'kg', name: 'Kongo' },
+    { code: 'kj', name: 'Kuanyama' },
+    { code: 'ku', name: 'Kurdish' },
+    { code: 'lo', name: 'Lao' },
+    { code: 'la', name: 'Latin' },
+    { code: 'ln', name: 'Lingala' },
+    { code: 'li', name: 'Limburgan' },
+    { code: 'lb', name: 'Luxembourgish' },
+    { code: 'lu', name: 'Luba-Katanga' },
+    { code: 'mk', name: 'Macedonian' },
+    { code: 'mg', name: 'Malagasy' },
+    { code: 'ml', name: 'Malayalam' },
+    { code: 'mt', name: 'Maltese' },
+    { code: 'gv', name: 'Manx' },
+    { code: 'mi', name: 'Maori' },
+    { code: 'mr', name: 'Marathi' },
+    { code: 'mh', name: 'Marshallese' },
+    { code: 'mn', name: 'Mongolian' },
+    { code: 'na', name: 'Nauru' },
+    { code: 'nv', name: 'Navajo' },
+    { code: 'nd', name: 'North Ndebele' },
+    { code: 'nr', name: 'South Ndebele' },
+    { code: 'ng', name: 'Ndonga' },
+    { code: 'ne', name: 'Nepali' },
+    { code: 'nn', name: 'Norwegian Nynorsk' },
+    { code: 'nb', name: 'Norwegian Bokmål' },
+    { code: 'oc', name: 'Occitan' },
+    { code: 'oj', name: 'Ojibwa' },
+    { code: 'or', name: 'Oriya' },
+    { code: 'om', name: 'Oromo' },
+    { code: 'os', name: 'Ossetian' },
+    { code: 'pi', name: 'Pali' },
+    { code: 'ps', name: 'Pushto' },
+    { code: 'qu', name: 'Quechua' },
+    { code: 'rm', name: 'Romansh' },
+    { code: 'rn', name: 'Rundi' },
+    { code: 'sa', name: 'Sanskrit' },
+    { code: 'sc', name: 'Sardinian' },
+    { code: 'sd', name: 'Sindhi' },
+    { code: 'se', name: 'Northern Sami' },
+    { code: 'sm', name: 'Samoan' },
+    { code: 'sg', name: 'Sango' },
+    { code: 'sr', name: 'Serbian' },
+    { code: 'sn', name: 'Shona' },
+    { code: 'si', name: 'Sinhala' },
+    { code: 'ss', name: 'Swati' },
+    { code: 'st', name: 'Southern Sotho' },
+    { code: 'su', name: 'Sundanese' },
+    { code: 'ta', name: 'Tamil' },
+    { code: 'te', name: 'Telugu' },
+    { code: 'tg', name: 'Tajik' },
+    { code: 'ti', name: 'Tigrinya' },
+    { code: 'to', name: 'Tonga' },
+    { code: 'ts', name: 'Tsonga' },
+    { code: 'tn', name: 'Tswana' },
+    { code: 'tk', name: 'Turkmen' },
+    { code: 'tw', name: 'Twi' },
+    { code: 'ty', name: 'Tahitian' },
+    { code: 'ug', name: 'Uighur' },
+    { code: 'uk', name: 'Ukrainian' },
+    { code: 'uz', name: 'Uzbek' },
+    { code: 've', name: 'Venda' },
+    { code: 'vo', name: 'Volapük' },
+    { code: 'wa', name: 'Walloon' },
+    { code: 'wo', name: 'Wolof' },
+    { code: 'xh', name: 'Xhosa' },
+    { code: 'yi', name: 'Yiddish' },
+    { code: 'yo', name: 'Yoruba' },
+    { code: 'za', name: 'Zhuang' },
+    { code: 'zu', name: 'Zulu' },
+  ];
+
   useEffect(() => {
-    const mockLanguages: LanguageItem[] = [
-      { code: 'ab', name: 'Abkhazian' },
-      { code: 'ace', name: 'Achinese' },
-      { code: 'ach', name: 'Acoli' },
-      { code: 'ada', name: 'Adangme' },
-      { code: 'ady', name: 'Adyghe' },
-      { code: 'aa', name: 'Afar' },
-      { code: 'afh', name: 'Afrihili' },
-      { code: 'af', name: 'Afrikaans' },
-      { code: 'afa', name: 'Afro-Asiatic languages' },
-      { code: 'ain', name: 'Ainu' },
-      { code: 'ak', name: 'Akan' },
-      { code: 'akk', name: 'Akkadian' },
-      { code: 'sq', name: 'Albanian' },
-      { code: 'ale', name: 'Aleut' },
-      { code: 'alg', name: 'Algonquian languages' },
-      { code: 'alt', name: 'Altai (Southern)' },
-      { code: 'tut', name: 'Altaic languages' },
-      { code: 'am', name: 'Amharic' },
-      { code: 'anp', name: 'Angika' },
-      { code: 'apa', name: 'Apache languages' },
-      { code: 'ar', name: 'Arabic' },
-      { code: 'an', name: 'Aragonese' },
-      { code: 'arc', name: 'Aramaic (Ancient)' },
-      { code: 'arp', name: 'Arapaho' },
-      { code: 'arw', name: 'Arawak' },
-      { code: 'hy', name: 'Armenian' },
-      { code: 'rup', name: 'Aromanian' },
-      { code: 'art', name: 'Artificial languages' },
-      { code: 'as', name: 'Assamese' },
-      { code: 'ast', name: 'Asturian' },
+    loadServerInfo();
+    loadConfiguration(); 
+    setAvailableLanguages(languages);
+  }, []);
+
+  const loadServerInfo = async () => {
+    try {
+      const response = await fetch('/api/serverinfo');
+      const data = await response.json();
+      setServerInfo(data);
+      setServerName(data.name || 'Tvheadend');
+      setOriginalServerName(data.name || 'Tvheadend');
+    } catch (error) {
+      console.error('Failed to load server info:', error);
+    }
+  };
+
+  const loadConfiguration = async () => {
+    try {
+      const response = await fetch('/api/config');
+      const data = await response.json();
+      
+      if (data.entries && data.entries.length > 0) {
+        const config = data.entries[0];
+        setDefaultLanguage(config.language_ui || '');
+        setTheme(config.theme_ui || 'Blue');
+        setItemsPerPage(String(config.page_size_ui || 50));
+        setDefaultViewLevel(config.uilevel === 0 ? 'Basic' : config.uilevel === 1 ? 'Advanced' : 'Expert');
+        setChannelNumbers(config.chname_num !== false);
+        setChannelSources(config.chname_src === true);
+        setKodiFormatting(config.label_formatting === true);
+      }
+    } catch (error) {
+      console.error('Failed to load configuration:', error);
+    }
+  };
+
+  const saveConfiguration = async () => {
+    try {
+      const uilevel = defaultViewLevel === 'Basic' ? 0 : defaultViewLevel === 'Advanced' ? 1 : 2;
+      
+      const configData = {
+        uuid: serverInfo?.uuid || '',
+        name: serverName,
+        language_ui: defaultLanguage,
+        theme_ui: theme,
+        page_size_ui: parseInt(itemsPerPage),
+        uilevel: uilevel,
+        chname_num: channelNumbers,
+        chname_src: channelSources,
+        label_formatting: kodiFormatting,
+      };
+
+      const response = await fetch('/api/idnode/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ node: configData }),
+      });
+
+      if (response.ok) {
+        setOriginalServerName(serverName);
+        console.log('Configuration saved successfully');
+      }
+    } catch (error) {
+      console.error('Failed to save configuration:', error);
+    }
+  };
+
+  const undoChanges = () => {
+    setServerName(originalServerName);
+    loadConfiguration();
+  };
+
+  const handleSectionToggle = (sectionId: string) => {
+    setExpandedSections(prev => 
+      prev.includes(sectionId) 
+        ? prev.filter(id => id !== sectionId)
+        : [...prev, sectionId]
+    );
+  };
+
+  const handleSectionSelect = (sectionId: string, subsectionId?: string) => {
+    setSelectedSection(sectionId);
+    if (subsectionId) {
+      setSelectedSubsection(subsectionId);
+    } else {
+      const section = configSections.find(s => s.id === sectionId);
+      if (section?.subsections) {
+        setSelectedSubsection(section.subsections[0].id);
+      }
+    }
+  };
+
+  const startWizard = () => {
+    setWizardOpen(true);
+    setWizardStep(0);
+  };
+
+  const nextWizardStep = () => {
+    if (wizardStep < 2) {
+      setWizardStep(wizardStep + 1);
+    } else {
+      // Save wizard settings
+      setWizardOpen(false);
+    }
+  };
+
+  const previousWizardStep = () => {
+    if (wizardStep > 0) {
+      setWizardStep(wizardStep - 1);
+    }
+  };
       { code: 'ath', name: 'Athapascan languages' },
       { code: 'aud', name: 'Audio Description' },
       { code: 'aus', name: 'Australian languages' },
