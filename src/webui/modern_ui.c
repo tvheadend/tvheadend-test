@@ -23,6 +23,7 @@
 
 /**
  * Serve the main modern UI page
+ * Auto-generated from asset manifest for cache invalidation
  */
 static int
 modern_ui_main(http_connection_t *hc, const char *remain, void *opaque)

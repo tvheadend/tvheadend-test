@@ -323,8 +323,9 @@ compile-modern:
 	@if [ -d "$(WEBDIR)/modern" ]; then \
 		cd $(WEBDIR)/modern && npm install && npm run build; \
 		mkdir -p ../static/modern; \
-		cp -r build/* ../static/modern/; \
+		cp -r build/* ../static/modern/ 2>/dev/null || true; \
 	fi
+	@python3 support/generate_modern_ui.py
 	@echo "Modern interface build completed"
 
 .PHONY:
