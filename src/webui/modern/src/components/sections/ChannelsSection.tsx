@@ -105,7 +105,7 @@ const ChannelsSection: React.FC = () => {
     <ConfigDataGrid
       title="Channels"
       titleSingular="Channel"
-      url="channel/grid"
+      url="channel"
       columns={columns}
       canAdd={true}
       canEdit={true}

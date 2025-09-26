@@ -142,7 +142,7 @@ const ConfigDataGrid: React.FC<ConfigDataGridProps> = ({
       });
 
       // Use POST request with grid parameters like the old UI  
-      const response = await fetch(`/api/${url}`, {
+      const response = await fetch(`api/${url}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params
@@ -233,7 +233,7 @@ const ConfigDataGrid: React.FC<ConfigDataGridProps> = ({
     
     try {
       for (const uuid of selectedRows) {
-        await fetch('/api/idnode/delete', {
+        await fetch('api/idnode/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ uuid }),
@@ -248,7 +248,7 @@ const ConfigDataGrid: React.FC<ConfigDataGridProps> = ({
 
   const handleSave = async () => {
     try {
-      const apiUrl = editDialog.isNew ? `/api/${url}` : '/api/idnode/save';
+      const apiUrl = editDialog.isNew ? `api/${url}` : 'api/idnode/save';
       const method = 'POST';
       const body = editDialog.isNew 
         ? { ...editData }
@@ -269,7 +269,7 @@ const ConfigDataGrid: React.FC<ConfigDataGridProps> = ({
 
   const handleMove = async (uuid: string, direction: 'up' | 'down') => {
     try {
-      await fetch('/api/idnode/move', {
+      await fetch('api/idnode/move', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uuid, dir: direction === 'up' ? -1 : 1 }),

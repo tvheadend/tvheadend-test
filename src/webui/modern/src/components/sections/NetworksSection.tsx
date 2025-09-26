@@ -122,7 +122,7 @@ const NetworksSection: React.FC = () => {
     <ConfigDataGrid
       title="Networks"
       titleSingular="Network"
-      url="mpegts/network/grid"
+      url="mpegts/network"
       columns={columns}
       canAdd={true}
       canEdit={true}
