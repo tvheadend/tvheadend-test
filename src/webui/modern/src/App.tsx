@@ -187,7 +187,7 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <Router>
+      <Router basename="/modern">
         <AppContent />
       </Router>
     </ThemeProvider>

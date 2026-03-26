@@ -68,7 +68,7 @@ import MemoryInfoSection from './sections/MemoryInfoSection';
 import TVAdaptersSection from './sections/TVAdaptersSection';
 import CAClientSection from './sections/CAClientSection';
 import BaseConfigSection from './sections/BaseConfigSection';
-// import BaseConfigSection from './sections/BaseConfigSection';
+import SatIPServerSection from './sections/SatIPServerSection';
 
 interface ConfigSection {
   id: string;
@@ -340,14 +340,7 @@ function Configuration() {
           case 'imagecache':
             return <ImageCacheSection />;
           case 'satip-server':
-            return (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>SAT&gt;IP Server</Typography>
-                  <Typography variant="body2">SAT&gt;IP server configuration will be implemented here.</Typography>
-                </CardContent>
-              </Card>
-            );
+            return <SatIPServerSection />;
           default:
             return (
               <Card>

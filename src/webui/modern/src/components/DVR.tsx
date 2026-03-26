@@ -13,40 +13,58 @@ import {
   TableRow,
   Button,
   Checkbox,
-  FormControlLabel,
   Chip,
   Pagination,
   CircularProgress,
-  Toolbar,
-  TextField,
+  IconButton,
+  Tooltip,
+  FormControlLabel,
 } from '@mui/material';
 import {
-  Save as SaveIcon,
-  Undo as UndoIcon,
-  Add as AddIcon,
   Delete as DeleteIcon,
-  Edit as EditIcon,
   Stop as StopIcon,
-  Cancel as CancelIcon,
-  History as HistoryIcon,
   Refresh as RefreshIcon,
-  Help as HelpIcon,
-  PlayArrow as PlayIcon,
+  Info as InfoIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
+import DVREntryDialog from './dialogs/DVREntryDialog';
 
 interface Recording {
-  id: string;
-  title: string;
-  extraText: string;
-  channel: string;
-  scheduledStart: string;
-  scheduledStop: string;
-  duration: number;
-  fileSize: string;
-  comment: string;
-  genre: string;
+  uuid: string;
+  disp_title: string;
+  disp_subtitle?: string;
+  disp_summary?: string;
+  disp_description?: string;
+  channelname: string;
+  start_real: number;
+  stop_real: number;
+  duration?: number;
+  filesize?: number;
+  comment?: string;
+  filename?: string;
+  sched_status: string;
+  enabled?: boolean;
+  errors?: number;
+}
+
+interface AutoRec {
+  uuid: string;
   enabled: boolean;
-  status: 'upcoming' | 'recording' | 'completed' | 'failed';
+  name: string;
+  title?: string;
+  channel?: string;
+  channelname?: string;
+  tag?: string;
+  genre?: string;
+  pri?: number;
+  config_name?: string;
+  weekdays?: number[];
+  start?: number;
+  stop?: number;
+  minduration?: number;
+  maxduration?: number;
+  fulltext?: boolean;
+  comment?: string;
 }
 
 interface TabPanelProps {
@@ -57,7 +75,6 @@ interface TabPanelProps {
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -66,429 +83,459 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`dvr-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <Box sx={{ p: 2 }}>{children}</Box>}
     </div>
   );
 }
 
+function formatBytes(bytes: number): string {
+  if (!bytes) return '';
+  const units = ['B', 'KiB', 'MiB', 'GiB'];
+  let i = 0;
+  let val = bytes;
+  while (val >= 1024 && i < units.length - 1) {
+    val /= 1024;
+    i++;
+  }
+  return `${val.toFixed(1)} ${units[i]}`;
+}
+
+function getStatusColor(status: string): 'default' | 'primary' | 'success' | 'error' | 'warning' {
+  switch (status) {
+    case 'recording': return 'error';
+    case 'scheduled': return 'primary';
+    case 'completed': return 'success';
+    case 'missed': case 'invalid': return 'warning';
+    default: return 'default';
+  }
+}
+
+const DVR_TABS = [
+  { label: 'Upcoming / Current', endpoint: '/api/dvr/entry/grid_upcoming' },
+  { label: 'Finished', endpoint: '/api/dvr/entry/grid_finished' },
+  { label: 'Failed', endpoint: '/api/dvr/entry/grid_failed' },
+  { label: 'Removed', endpoint: '/api/dvr/entry/grid_removed' },
+  { label: 'Auto Recordings', endpoint: '/api/dvr/autorec/grid' },
+  { label: 'Time-based Recordings', endpoint: '/api/dvr/timerec/grid' },
+];
+
 function DVR() {
   const [currentTab, setCurrentTab] = useState(0);
   const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [autoRecs, setAutoRecs] = useState<AutoRec[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage] = useState(50);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [selectedRecordings, setSelectedRecordings] = useState<string[]>([]);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [detailEntry, setDetailEntry] = useState<Recording | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
-  const tabs = [
-    { label: 'Upcoming / Current Recordings', value: 0, status: ['upcoming', 'recording'] },
-    { label: 'Finished Recordings', value: 1, status: ['completed'] },
-    { label: 'Failed Recordings', value: 2, status: ['failed'] },
-    { label: 'Autorecs', value: 3, status: [] },
-    { label: 'Timers', value: 4, status: [] },
-  ];
 
-  const columns = [
-    { key: 'title', label: 'Title' },
-    { key: 'extraText', label: 'Extra text' },
-    { key: 'channel', label: 'Channel' },
-    { key: 'scheduledStart', label: 'Scheduled start time' },
-    { key: 'scheduledStop', label: 'Scheduled stop time' },
-    { key: 'duration', label: 'Scheduled Duration' },
-    { key: 'fileSize', label: 'File size' },
-    { key: 'comment', label: 'Comment' },
-    { key: 'genre', label: 'Genre' },
-  ];
-
-  const loadRecordings = useCallback(() => {
+  const loadData = useCallback(() => {
     setLoading(true);
-    
-    // Build query parameters for DVR API
     const params = new URLSearchParams({
       start: ((page - 1) * itemsPerPage).toString(),
-      limit: itemsPerPage.toString()
+      limit: itemsPerPage.toString(),
     });
-    
-    let endpoint = '/api/dvr/entry/grid_upcoming';
-    if (currentTab === 1) endpoint = '/api/dvr/entry/grid_finished';
-    if (currentTab === 2) endpoint = '/api/dvr/entry/grid_failed';
-    if (currentTab === 3) endpoint = '/api/dvr/autorec/grid';
-    if (currentTab === 4) endpoint = '/api/dvr/timerec/grid';
-    
+
+    const endpoint = DVR_TABS[currentTab]?.endpoint;
+    if (!endpoint) return;
+
     fetch(`${endpoint}?${params}`)
       .then(res => res.json())
       .then(data => {
-        const mappedRecordings: Recording[] = (data.entries || []).map((entry: any) => ({
-          id: entry.uuid,
-          title: entry.disp_title || entry.title || '',
-          extraText: entry.disp_subtitle || entry.subtitle || '',
-          channel: entry.channelname || '',
-          scheduledStart: entry.start_real ? new Date(entry.start_real * 1000).toLocaleString() : '',
-          scheduledStop: entry.stop_real ? new Date(entry.stop_real * 1000).toLocaleString() : '',
-          duration: entry.duration || 0,
-          fileSize: entry.filesize ? `${Math.round(entry.filesize / 1024 / 1024)} MB` : '',
-          comment: entry.comment || '',
-          genre: entry.genre ? entry.genre.join(', ') : '',
-          enabled: entry.enabled !== false,
-          status: entry.sched_status === 'recording' ? 'recording' :
-                  entry.sched_status === 'scheduled' ? 'upcoming' :
-                  entry.sched_status === 'completed' ? 'completed' :
-                  entry.sched_status === 'missed' ? 'failed' : 'upcoming'
-        }));
-        
-        setRecordings(mappedRecordings);
-        setTotalPages(Math.ceil((data.totalCount || 0) / itemsPerPage));
+        const entries = data.entries || [];
+        if (currentTab >= 4) {
+          setAutoRecs(entries);
+        } else {
+          setRecordings(entries);
+        }
+        setTotalItems(data.totalCount || entries.length);
+        setTotalPages(Math.max(1, Math.ceil((data.totalCount || entries.length) / itemsPerPage)));
         setLoading(false);
       })
       .catch(err => {
-        console.error('Failed to fetch recordings:', err);
+        console.error('Failed to load DVR data:', err);
         setRecordings([]);
-        setTotalPages(1);
+        setAutoRecs([]);
         setLoading(false);
       });
   }, [currentTab, page, itemsPerPage]);
 
   useEffect(() => {
-    loadRecordings();
-  }, [loadRecordings]);
+    loadData();
+    setSelectedItems([]);
+  }, [loadData]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (autoRefresh) {
-      interval = setInterval(loadRecordings, 10000); // Refresh every 10 seconds
+    let interval: ReturnType<typeof setInterval>;
+    if (autoRefresh && currentTab < 2) {
+      interval = setInterval(loadData, 10000);
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [autoRefresh, loadRecordings]);
+    return () => { if (interval) clearInterval(interval); };
+  }, [autoRefresh, loadData, currentTab]);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
     setPage(1);
-    setSelectedRecordings([]);
+    setSelectedItems([]);
   };
 
-  const handleSelectRecording = (recordingId: string) => {
-    setSelectedRecordings(prev => {
-      if (prev.includes(recordingId)) {
-        return prev.filter(id => id !== recordingId);
-      } else {
-        return [...prev, recordingId];
-      }
-    });
+  const handleSelectItem = (uuid: string) => {
+    setSelectedItems(prev =>
+      prev.includes(uuid) ? prev.filter(id => id !== uuid) : [...prev, uuid]
+    );
   };
 
-  const handleSelectAllRecordings = () => {
-    if (selectedRecordings.length === recordings.length) {
-      setSelectedRecordings([]);
+  const handleSelectAll = (items: Array<{ uuid: string }>) => {
+    if (selectedItems.length === items.length) {
+      setSelectedItems([]);
     } else {
-      setSelectedRecordings(recordings.map(r => r.id));
+      setSelectedItems(items.map(i => i.uuid));
     }
   };
 
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}:${mins.toString().padStart(2, '0')}`;
+  const handleDeleteSelected = async () => {
+    if (selectedItems.length === 0) return;
+    for (const uuid of selectedItems) {
+      try {
+        await fetch('/api/idnode/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uuid }),
+        });
+      } catch (e) {
+        console.error('Delete failed for', uuid);
+      }
+    }
+    setSelectedItems([]);
+    loadData();
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'recording': return 'error';
-      case 'completed': return 'success';
-      case 'upcoming': return 'info';
-      case 'failed': return 'error';
-      default: return 'default';
+  const handleStopRecording = async (uuid: string) => {
+    try {
+      await fetch('/api/dvr/entry/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ uuid }),
+      });
+      loadData();
+    } catch (e) {
+      console.error('Stop failed:', e);
     }
   };
 
-  const handleAddRecording = () => {
-    // Open recording creation dialog
-    console.log('Add recording clicked');
+  const handleAbortRecording = async (uuid: string) => {
+    try {
+      await fetch('/api/dvr/entry/abort', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ uuid }),
+      });
+      loadData();
+    } catch (e) {
+      console.error('Abort failed:', e);
+    }
   };
 
-  const handleHelp = () => {
-    // Open help dialog
-    console.log('Help clicked');
+  const handleCancelEntry = async (uuid: string) => {
+    try {
+      await fetch('/api/dvr/entry/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ uuid }),
+      });
+      loadData();
+    } catch (e) {
+      console.error('Cancel failed:', e);
+    }
   };
 
-  const currentTabData = tabs[currentTab];
-  const filteredRecordings = recordings.filter(recording => 
-    currentTabData.status.length === 0 || currentTabData.status.includes(recording.status)
+  const handleOpenDetail = (entry: Recording) => {
+    setDetailEntry(entry);
+    setDetailDialogOpen(true);
+  };
+
+
+  const renderRecordingsTable = (items: Recording[]) => (
+    <TableContainer>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell padding="checkbox">
+              <Checkbox
+                indeterminate={selectedItems.length > 0 && selectedItems.length < items.length}
+                checked={items.length > 0 && selectedItems.length === items.length}
+                onChange={() => handleSelectAll(items)}
+              />
+            </TableCell>
+            <TableCell sx={{ width: 40 }}></TableCell>
+            <TableCell>Title</TableCell>
+            <TableCell>Extra</TableCell>
+            <TableCell>Channel</TableCell>
+            <TableCell>Start</TableCell>
+            <TableCell>Stop</TableCell>
+            <TableCell>Size</TableCell>
+            <TableCell>Status</TableCell>
+            <TableCell>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                <CircularProgress />
+              </TableCell>
+            </TableRow>
+          ) : items.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                <Typography color="text.secondary">No recordings</Typography>
+              </TableCell>
+            </TableRow>
+          ) : items.map((rec) => (
+            <TableRow
+              key={rec.uuid}
+              hover
+              selected={selectedItems.includes(rec.uuid)}
+              onClick={() => handleOpenDetail(rec)}
+              sx={{ cursor: 'pointer' }}
+            >
+              <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  checked={selectedItems.includes(rec.uuid)}
+                  onChange={() => handleSelectItem(rec.uuid)}
+                />
+              </TableCell>
+              <TableCell onClick={(e) => e.stopPropagation()}>
+                <Tooltip title="Details">
+                  <IconButton size="small" onClick={() => handleOpenDetail(rec)}>
+                    <InfoIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" fontWeight="medium" noWrap sx={{ maxWidth: 180 }}>
+                  {rec.disp_title}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 120 }}>
+                  {rec.disp_subtitle}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">{rec.channelname}</Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">
+                  {rec.start_real ? new Date(rec.start_real * 1000).toLocaleString() : '—'}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">
+                  {rec.stop_real ? new Date(rec.stop_real * 1000).toLocaleString() : '—'}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">
+                  {rec.filesize ? formatBytes(rec.filesize) : '—'}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Chip
+                  label={rec.sched_status}
+                  color={getStatusColor(rec.sched_status)}
+                  size="small"
+                />
+              </TableCell>
+              <TableCell onClick={(e) => e.stopPropagation()}>
+                <Box display="flex" gap={0.5}>
+                  {rec.sched_status === 'recording' && (
+                    <Tooltip title="Stop recording">
+                      <IconButton size="small" color="warning" onClick={() => handleStopRecording(rec.uuid)}>
+                        <StopIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {rec.sched_status === 'recording' && (
+                    <Tooltip title="Abort recording">
+                      <IconButton size="small" color="error" onClick={() => handleAbortRecording(rec.uuid)}>
+                        <StopIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {rec.sched_status === 'completed' && rec.filename && (
+                    <Tooltip title="Download">
+                      <IconButton
+                        size="small"
+                        color="success"
+                        component="a"
+                        href={`/dvrfile/${rec.uuid}`}
+                        target="_blank"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <DownloadIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {rec.sched_status === 'scheduled' && (
+                    <Tooltip title="Cancel">
+                      <IconButton size="small" color="error" onClick={() => handleCancelEntry(rec.uuid)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
+  const renderAutoRecsTable = (items: AutoRec[]) => (
+    <TableContainer>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell padding="checkbox">
+              <Checkbox
+                indeterminate={selectedItems.length > 0 && selectedItems.length < items.length}
+                checked={items.length > 0 && selectedItems.length === items.length}
+                onChange={() => handleSelectAll(items)}
+              />
+            </TableCell>
+            <TableCell>Enabled</TableCell>
+            <TableCell>Name</TableCell>
+            <TableCell>Title</TableCell>
+            <TableCell>Channel</TableCell>
+            <TableCell>Priority</TableCell>
+            <TableCell>Comment</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                <CircularProgress />
+              </TableCell>
+            </TableRow>
+          ) : items.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                <Typography color="text.secondary">No auto-recording rules</Typography>
+              </TableCell>
+            </TableRow>
+          ) : items.map((rec) => (
+            <TableRow key={rec.uuid} hover selected={selectedItems.includes(rec.uuid)}>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  checked={selectedItems.includes(rec.uuid)}
+                  onChange={() => handleSelectItem(rec.uuid)}
+                />
+              </TableCell>
+              <TableCell>
+                <Chip label={rec.enabled ? 'Yes' : 'No'} size="small" color={rec.enabled ? 'success' : 'default'} />
+              </TableCell>
+              <TableCell>{rec.name}</TableCell>
+              <TableCell>{rec.title}</TableCell>
+              <TableCell>{rec.channelname || '—'}</TableCell>
+              <TableCell>{rec.pri}</TableCell>
+              <TableCell>{rec.comment}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Digital Video Recorder
-      </Typography>
+      <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+        <Typography variant="h4" component="h1">
+          Digital Video Recorder
+        </Typography>
+        <Box display="flex" gap={1} alignItems="center">
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                size="small"
+              />
+            }
+            label="Auto-refresh"
+          />
+          <Tooltip title="Refresh">
+            <IconButton size="small" onClick={loadData}>
+              {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
 
-      {/* Tabs */}
+      {/* Toolbar actions */}
       <Paper sx={{ mb: 2 }}>
+        <Box sx={{ p: 1, display: 'flex', gap: 1, flexWrap: 'wrap', borderBottom: 1, borderColor: 'divider' }}>
+          <Button
+            startIcon={<DeleteIcon />}
+            disabled={selectedItems.length === 0}
+            onClick={handleDeleteSelected}
+            color="error"
+            size="small"
+          >
+            Delete ({selectedItems.length})
+          </Button>
+          <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center', ml: 1 }}>
+            {totalItems > 0 && `${totalItems} total`}
+          </Typography>
+        </Box>
+
         <Tabs
           value={currentTab}
           onChange={handleTabChange}
           variant="scrollable"
           scrollButtons="auto"
-          aria-label="DVR tabs"
         >
-          {tabs.map((tab) => (
-            <Tab key={tab.value} label={tab.label} />
+          {DVR_TABS.map((tab, index) => (
+            <Tab key={index} label={tab.label} />
           ))}
         </Tabs>
       </Paper>
 
-      {/* Toolbar */}
-      <Paper sx={{ mb: 2 }}>
-        <Toolbar sx={{ flexWrap: 'wrap', gap: 1 }}>
-          {/* Main Action Buttons - Only show for upcoming/current recordings, autorecs, and timers */}
-          {(currentTab === 0 || currentTab === 3 || currentTab === 4) && (
-            <>
-              <Button
-                startIcon={<SaveIcon />}
-                variant="outlined"
-                size="small"
-                disabled={selectedRecordings.length === 0}
-              >
-                Save
-              </Button>
-              <Button
-                startIcon={<UndoIcon />}
-                variant="outlined"
-                size="small"
-              >
-                Undo
-              </Button>
-              <Button
-                startIcon={<AddIcon />}
-                variant="contained"
-                size="small"
-                onClick={handleAddRecording}
-              >
-                Add
-              </Button>
-            </>
-          )}
-          
-          {/* Delete, Edit, Stop, Abort - Show for all tabs */}
-          <Button
-            startIcon={<DeleteIcon />}
-            variant="outlined"
-            size="small"
-            disabled={selectedRecordings.length === 0}
-            color="error"
-          >
-            Delete
-          </Button>
-          <Button
-            startIcon={<EditIcon />}
-            variant="outlined"
-            size="small"
-            disabled={selectedRecordings.length !== 1}
-          >
-            Edit
-          </Button>
-          
-          {/* Stop and Abort - Only for upcoming/current recordings */}
-          {currentTab === 0 && (
-            <>
-              <Button
-                startIcon={<StopIcon />}
-                variant="outlined"
-                size="small"
-                disabled={selectedRecordings.length === 0}
-                color="warning"
-              >
-                Stop
-              </Button>
-              <Button
-                startIcon={<CancelIcon />}
-                variant="outlined"
-                size="small"
-                disabled={selectedRecordings.length === 0}
-                color="error"
-              >
-                Abort
-              </Button>
-            </>
-          )}
-
-          {/* Secondary Action Buttons */}
-          <Button
-            startIcon={<HistoryIcon />}
-            variant="outlined"
-            size="small"
-            disabled={selectedRecordings.length !== 1}
-          >
-            Previously recorded
-          </Button>
-          <Button
-            startIcon={<PlayIcon />}
-            variant="outlined"
-            size="small"
-            disabled={selectedRecordings.length !== 1}
-          >
-            Related broadcasts
-          </Button>
-          <Button
-            startIcon={<RefreshIcon />}
-            variant="outlined"
-            size="small"
-            disabled={selectedRecordings.length !== 1}
-          >
-            Alternative showings
-          </Button>
-
-          {/* View Level and Help */}
-          <Box sx={{ flexGrow: 1 }} />
-          <Button
-            variant="outlined"
-            size="small"
-          >
-            View level: Basic
-          </Button>
-          <Button
-            startIcon={<HelpIcon />}
-            variant="outlined"
-            size="small"
-            onClick={handleHelp}
-          >
-            Help
-          </Button>
-        </Toolbar>
-      </Paper>
-
-      {/* Tab Content */}
-      {tabs.map((tab, index) => (
-        <TabPanel key={tab.value} value={currentTab} index={index}>
-          <Paper>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        indeterminate={selectedRecordings.length > 0 && selectedRecordings.length < filteredRecordings.length}
-                        checked={filteredRecordings.length > 0 && selectedRecordings.length === filteredRecordings.length}
-                        onChange={handleSelectAllRecordings}
-                      />
-                    </TableCell>
-                    <TableCell>Details</TableCell>
-                    <TableCell>Content Icons</TableCell>
-                    <TableCell>Enabled</TableCell>
-                    {columns.map((column) => (
-                      <TableCell key={column.key}>{column.label}</TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={columns.length + 4} align="center" sx={{ py: 4 }}>
-                        <CircularProgress />
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredRecordings.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={columns.length + 4} align="center" sx={{ py: 4 }}>
-                        <Typography color="text.secondary">
-                          {currentTab === 0 && 'No upcoming / current recordings to display'}
-                          {currentTab === 1 && 'No finished recordings to display'}
-                          {currentTab === 2 && 'No failed recordings to display'}
-                          {currentTab === 3 && 'No autorecs to display'}
-                          {currentTab === 4 && 'No timers to display'}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredRecordings.map((recording) => (
-                      <TableRow key={recording.id} hover>
-                        <TableCell padding="checkbox">
-                          <Checkbox
-                            checked={selectedRecordings.includes(recording.id)}
-                            onChange={() => handleSelectRecording(recording.id)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Button size="small">Details</Button>
-                        </TableCell>
-                        <TableCell>
-                          <Box display="flex" gap={0.5}>
-                            <Chip
-                              label={recording.status.toUpperCase()}
-                              size="small"
-                              color={getStatusColor(recording.status) as any}
-                            />
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Checkbox
-                            checked={recording.enabled}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>{recording.title}</TableCell>
-                        <TableCell>{recording.extraText}</TableCell>
-                        <TableCell>{recording.channel}</TableCell>
-                        <TableCell>{recording.scheduledStart}</TableCell>
-                        <TableCell>{recording.scheduledStop}</TableCell>
-                        <TableCell>{formatDuration(recording.duration)}</TableCell>
-                        <TableCell>{recording.fileSize}</TableCell>
-                        <TableCell>{recording.comment}</TableCell>
-                        <TableCell>
-                          <Chip label={recording.genre} size="small" variant="outlined" />
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            {/* Pagination and Controls */}
-            <Box display="flex" justifyContent="space-between" alignItems="center" p={2}>
-              <Box display="flex" alignItems="center" gap={2}>
-                <Typography variant="body2">
-                  Page {page} of {totalPages}
-                </Typography>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={autoRefresh}
-                      onChange={(e) => setAutoRefresh(e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label="Auto-refresh"
-                />
-              </Box>
-
-              <Box display="flex" alignItems="center" gap={2}>
-                <Typography variant="body2">Per page:</Typography>
-                <TextField
-                  size="small"
-                  type="number"
-                  value={itemsPerPage}
-                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                  sx={{ width: 80 }}
-                />
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={(e, newPage) => setPage(newPage)}
-                  color="primary"
-                  size="small"
-                />
-              </Box>
+      {/* Content panels */}
+      {DVR_TABS.map((_, index) => (
+        <TabPanel key={index} value={currentTab} index={index}>
+          {index < 4
+            ? renderRecordingsTable(recordings)
+            : renderAutoRecsTable(autoRecs)
+          }
+          {totalPages > 1 && (
+            <Box display="flex" justifyContent="center" p={2}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+              />
             </Box>
-          </Paper>
+          )}
         </TabPanel>
       ))}
+
+      {/* Entry Details Dialog */}
+      <DVREntryDialog
+        open={detailDialogOpen}
+        onClose={() => setDetailDialogOpen(false)}
+        entry={detailEntry}
+        onDeleted={loadData}
+        onStopped={loadData}
+      />
     </Box>
   );
 }
