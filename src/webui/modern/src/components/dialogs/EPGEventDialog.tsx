@@ -59,7 +59,7 @@ interface EPGEventDialogProps {
   onClose: () => void;
   event: EPGEvent | null;
   onWatchTV?: (event: EPGEvent) => void;
-  onRecord?: (event: EPGEvent) => void;
+  onAddRecording?: (event: EPGEvent) => void;
   onCancelRecording?: (dvrUuid: string) => void;
 }
 
@@ -86,7 +86,7 @@ const EPGEventDialog: React.FC<EPGEventDialogProps> = ({
   onClose,
   event,
   onWatchTV,
-  onRecord,
+  onAddRecording,
   onCancelRecording,
 }) => {
   const [recording, setRecording] = useState(false);
@@ -97,32 +97,6 @@ const EPGEventDialog: React.FC<EPGEventDialogProps> = ({
   const isRecorded = event.dvrState === 'scheduled' || event.dvrState === 'recording' || event.dvrState === 'completed';
   const isScheduled = event.dvrState === 'scheduled';
   const isRecording = event.dvrState === 'recording';
-
-  const handleRecord = async () => {
-    if (!event.eventId) return;
-    setRecording(true);
-    setMessage(null);
-    try {
-      const response = await fetch('/api/dvr/entry/create_by_event', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          event_id: event.eventId,
-          config_uuid: '',
-        }),
-      });
-      if (response.ok) {
-        setMessage({ type: 'success', text: 'Recording scheduled successfully' });
-        if (onRecord) onRecord(event);
-      } else {
-        setMessage({ type: 'error', text: 'Failed to schedule recording' });
-      }
-    } catch (e) {
-      setMessage({ type: 'error', text: 'Failed to schedule recording' });
-    } finally {
-      setRecording(false);
-    }
-  };
 
   const handleCancelRecording = async () => {
     if (!event.dvrUuid) return;
@@ -340,13 +314,12 @@ const EPGEventDialog: React.FC<EPGEventDialogProps> = ({
 
         {!isRecorded && event.eventId && (
           <Button
-            startIcon={recording ? <CircularProgress size={16} /> : <RecordIcon />}
-            onClick={handleRecord}
-            disabled={recording}
+            startIcon={<RecordIcon />}
+            onClick={() => onAddRecording && onAddRecording(event)}
             color="error"
             variant="contained"
           >
-            Record
+            Add Recording
           </Button>
         )}
 

@@ -44,6 +44,7 @@ import {
 import WatchTVDialog from './dialogs/WatchTVDialog';
 import EPGEventDialog from './dialogs/EPGEventDialog';
 import CreateAutoRecDialog from './dialogs/CreateAutoRecDialog';
+import AddRecordingDialog from './dialogs/AddRecordingDialog';
 
 interface EPGEvent {
   eventId: string;
@@ -114,6 +115,7 @@ function EPG() {
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [watchTVDialogOpen, setWatchTVDialogOpen] = useState(false);
   const [autoRecDialogOpen, setAutoRecDialogOpen] = useState(false);
+  const [addRecordingDialogOpen, setAddRecordingDialogOpen] = useState(false);
   const [watchTVChannel, setWatchTVChannel] = useState<string | undefined>();
 
   // Filter data
@@ -195,20 +197,9 @@ function EPG() {
     setWatchTVDialogOpen(true);
   };
 
-  const handleRecord = async (event: EPGEvent) => {
-    try {
-      await fetch('/api/dvr/entry/create_by_event', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          event_id: event.eventId,
-          config_uuid: '',
-        }),
-      });
-      loadEvents();
-    } catch (e) {
-      console.error('Failed to schedule recording:', e);
-    }
+  const handleOpenAddRecording = (event: EPGEvent) => {
+    setSelectedEvent(event);
+    setAddRecordingDialogOpen(true);
   };
 
   const getDVRChip = (event: EPGEvent) => {
@@ -434,7 +425,7 @@ function EPG() {
                       </Tooltip>
                       {!event.dvrState && (
                         <Tooltip title="Record">
-                          <IconButton size="small" color="error" onClick={() => handleRecord(event)}>
+                          <IconButton size="small" color="error" onClick={() => handleOpenAddRecording(event)}>
                             <RecordIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
@@ -468,9 +459,10 @@ function EPG() {
           setEventDialogOpen(false);
           if (event.channelUuid) handleWatchTV(event as EPGEvent);
         }}
-        onRecord={(event) => {
-          loadEvents();
+        onAddRecording={(event) => {
           setEventDialogOpen(false);
+          setSelectedEvent(event as EPGEvent);
+          setAddRecordingDialogOpen(true);
         }}
         onCancelRecording={() => {
           loadEvents();
@@ -493,6 +485,13 @@ function EPG() {
         eventId={selectedEvent?.eventId}
         title={selectedEvent?.title}
         channel={selectedEvent?.channelUuid}
+      />
+
+      <AddRecordingDialog
+        open={addRecordingDialogOpen}
+        onClose={() => setAddRecordingDialogOpen(false)}
+        event={selectedEvent}
+        onScheduled={loadEvents}
       />
     </Box>
   );
