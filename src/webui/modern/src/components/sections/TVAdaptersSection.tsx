@@ -31,7 +31,7 @@ interface HardwareNode {
   cls?: string;
   leaf?: boolean;
   children?: HardwareNode[];
-  params?: Record<string, any>;
+  params?: Array<{ id?: string; value?: any }> | Record<string, any>;
   uuid?: string;
   enabled?: boolean;
   devicename?: string;
@@ -68,20 +68,47 @@ const TVAdaptersSection: React.FC = () => {
     loadHardware();
   }, []);
 
+  const getParamValue = (node: HardwareNode, key: string) => {
+    if (!node.params) return undefined;
+    if (Array.isArray(node.params)) {
+      return node.params.find((param) => param?.id === key)?.value;
+    }
+    return node.params[key];
+  };
+
+  const getNodeEnabled = (node: HardwareNode) => {
+    if (typeof node.enabled === 'boolean') return node.enabled;
+    const active = getParamValue(node, 'active');
+    if (typeof active === 'boolean') return active;
+    if (typeof active === 'number') return active !== 0;
+    if (typeof active === 'string') return active !== '0' && active.toLowerCase() !== 'false';
+    return undefined;
+  };
+
   const renderNode = (node: HardwareNode, depth = 0) => {
     const isAdapter = depth === 0;
+    const isEnabled = getNodeEnabled(node);
+    const signal = node.signal ?? getParamValue(node, 'signal');
+    const snr = node.snr ?? getParamValue(node, 'snr');
+    const ber = node.ber ?? getParamValue(node, 'ber');
+    const bps = node.bps ?? getParamValue(node, 'bps');
+    const services = node.services ?? getParamValue(node, 'services');
+    const subscriptions = node.subscriptions ?? getParamValue(node, 'subscriptions');
 
     return (
-      <Accordion key={node.id || node.uuid} defaultExpanded={isAdapter}>
+      <Accordion
+        key={node.id || node.uuid}
+        defaultExpanded={isAdapter}
+        disableGutters
+        sx={{ ml: depth > 0 ? 2 : 0, borderLeft: depth > 0 ? '1px solid' : 'none', borderColor: 'divider' }}
+      >
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Box display="flex" alignItems="center" gap={1}>
             {isAdapter ? <TvIcon color="primary" fontSize="small" /> : <RouterIcon color="action" fontSize="small" />}
             <Typography variant={isAdapter ? 'subtitle1' : 'body1'} fontWeight={isAdapter ? 'bold' : 'normal'}>
               {node.text || node.displayname || node.devicename || node.id}
             </Typography>
-            {node.enabled === false && (
-              <Chip label="Disabled" size="small" color="warning" />
-            )}
+            {isEnabled !== undefined && <Chip label={isEnabled ? 'Enabled' : 'Disabled'} size="small" color={isEnabled ? 'success' : 'default'} />}
             {node.fe_status && (
               <Chip
                 label={node.fe_status}
@@ -93,45 +120,45 @@ const TVAdaptersSection: React.FC = () => {
         </AccordionSummary>
         <AccordionDetails sx={{ pl: depth * 2 + 2 }}>
           {/* Signal info if available */}
-          {(node.signal != null || node.snr != null || node.bps != null) && (
+          {(signal != null || snr != null || bps != null) && (
             <Box mb={2}>
               <TableContainer component={Paper} variant="outlined">
                 <Table size="small">
                   <TableBody>
-                    {node.signal != null && (
+                    {signal != null && (
                       <TableRow>
                         <TableCell><strong>Signal</strong></TableCell>
-                        <TableCell>{node.signal}%</TableCell>
+                        <TableCell>{signal}%</TableCell>
                       </TableRow>
                     )}
-                    {node.snr != null && (
+                    {snr != null && (
                       <TableRow>
                         <TableCell><strong>SNR</strong></TableCell>
-                        <TableCell>{node.snr} dB</TableCell>
+                        <TableCell>{snr} dB</TableCell>
                       </TableRow>
                     )}
-                    {node.ber != null && (
+                    {ber != null && (
                       <TableRow>
                         <TableCell><strong>BER</strong></TableCell>
-                        <TableCell>{node.ber}</TableCell>
+                        <TableCell>{ber}</TableCell>
                       </TableRow>
                     )}
-                    {node.bps != null && (
+                    {bps != null && (
                       <TableRow>
                         <TableCell><strong>Bitrate</strong></TableCell>
-                        <TableCell>{node.bps} b/s</TableCell>
+                        <TableCell>{bps} b/s</TableCell>
                       </TableRow>
                     )}
-                    {node.services != null && (
+                    {services != null && (
                       <TableRow>
                         <TableCell><strong>Services</strong></TableCell>
-                        <TableCell>{node.services}</TableCell>
+                        <TableCell>{services}</TableCell>
                       </TableRow>
                     )}
-                    {node.subscriptions != null && (
+                    {subscriptions != null && (
                       <TableRow>
                         <TableCell><strong>Subscriptions</strong></TableCell>
-                        <TableCell>{node.subscriptions}</TableCell>
+                        <TableCell>{subscriptions}</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
