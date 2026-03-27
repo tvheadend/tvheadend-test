@@ -39,7 +39,7 @@ modern_ui_main(http_connection_t *hc, const char *remain, void *opaque)
   htsbuf_append_str(hq, "  <meta name=\"theme-color\" content=\"#000000\" />\n");
   htsbuf_append_str(hq, "  <meta name=\"description\" content=\"Tvheadend Modern Interface\" />\n");
   htsbuf_append_str(hq, "  <title>Tvheadend</title>\n");
-  htsbuf_append_str(hq, "  <script defer=\"defer\" src=\"/static/modern/static/js/main.01dd4c9d.js\"></script>\n");
+  htsbuf_append_str(hq, "  <script defer=\"defer\" src=\"/static/modern/static/js/main.fe8a9871.js\"></script>\n");
   htsbuf_append_str(hq, "  <link href=\"/static/modern/static/css/main.e6c13ad2.css\" rel=\"stylesheet\">\n");
   htsbuf_append_str(hq, "</head>\n");
   htsbuf_append_str(hq, "<body>\n");
