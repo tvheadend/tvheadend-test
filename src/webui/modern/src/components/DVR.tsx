@@ -535,6 +535,7 @@ function DVR() {
         entry={detailEntry}
         onDeleted={loadData}
         onStopped={loadData}
+        onUpdated={loadData}
       />
     </Box>
   );

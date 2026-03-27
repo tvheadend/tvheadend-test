@@ -53,6 +53,7 @@ interface DVREntryDialogProps {
   entry: DVREntry | null;
   onDeleted?: () => void;
   onStopped?: () => void;
+  onUpdated?: () => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -73,15 +74,71 @@ const DVREntryDialog: React.FC<DVREntryDialogProps> = ({
   entry,
   onDeleted,
   onStopped,
+  onUpdated,
 }) => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [loadedEntry, setLoadedEntry] = useState<DVREntry | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
-  if (!entry) return null;
+  React.useEffect(() => {
+    let active = true;
+    if (!open || !entry?.uuid) return;
 
-  const isRecording = entry.sched_status === 'recording';
-  const isUpcoming = entry.sched_status === 'scheduled';
-  const isCompleted = entry.sched_status === 'completed';
+    setLoadedEntry(entry);
+    setDetailsLoading(true);
+    fetch('/api/idnode/load', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uuid: entry.uuid }),
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (!active || !data?.entries?.[0]) return;
+        setLoadedEntry((prev) => ({ ...(prev || entry), ...data.entries[0] }));
+      })
+      .catch(() => {
+        // fallback to row data only
+      })
+      .finally(() => {
+        if (active) setDetailsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [open, entry]);
+
+  const effectiveEntry = loadedEntry || entry;
+
+  if (!effectiveEntry) return null;
+
+  const isRecording = effectiveEntry.sched_status === 'recording';
+  const isUpcoming = effectiveEntry.sched_status === 'scheduled';
+  const isCompleted = effectiveEntry.sched_status === 'completed';
+  const isFailed = effectiveEntry.sched_status === 'failed' || effectiveEntry.sched_status === 'invalid' || effectiveEntry.sched_status === 'missed';
+
+  const handleDvrAction = async (url: string, successText: string, onSuccess?: () => void) => {
+    setLoading(true);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uuid: effectiveEntry.uuid }),
+      });
+      if (response.ok) {
+        setMessage({ type: 'success', text: successText });
+        if (onSuccess) onSuccess();
+        if (onUpdated) onUpdated();
+      } else {
+        setMessage({ type: 'error', text: `Failed: ${successText}` });
+      }
+    } catch (e) {
+      setMessage({ type: 'error', text: `Failed: ${successText}` });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDelete = async () => {
     setLoading(true);
@@ -89,12 +146,13 @@ const DVREntryDialog: React.FC<DVREntryDialogProps> = ({
       const response = await fetch('/api/idnode/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uuid: entry.uuid }),
+        body: JSON.stringify({ uuid: effectiveEntry.uuid }),
       });
       if (response.ok) {
         setMessage({ type: 'success', text: 'Recording deleted' });
         setTimeout(() => {
           if (onDeleted) onDeleted();
+          if (onUpdated) onUpdated();
           onClose();
         }, 1000);
       } else {
@@ -108,45 +166,11 @@ const DVREntryDialog: React.FC<DVREntryDialogProps> = ({
   };
 
   const handleStop = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/dvr/entry/stop', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ uuid: entry.uuid }),
-      });
-      if (response.ok) {
-        setMessage({ type: 'success', text: 'Recording stopped' });
-        if (onStopped) onStopped();
-      } else {
-        setMessage({ type: 'error', text: 'Failed to stop recording' });
-      }
-    } catch (e) {
-      setMessage({ type: 'error', text: 'Failed to stop recording' });
-    } finally {
-      setLoading(false);
-    }
+    handleDvrAction('/api/dvr/entry/stop', 'Recording stopped', onStopped);
   };
 
   const handleAbort = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/dvr/entry/abort', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ uuid: entry.uuid }),
-      });
-      if (response.ok) {
-        setMessage({ type: 'success', text: 'Recording aborted' });
-        if (onStopped) onStopped();
-      } else {
-        setMessage({ type: 'error', text: 'Failed to abort recording' });
-      }
-    } catch (e) {
-      setMessage({ type: 'error', text: 'Failed to abort recording' });
-    } finally {
-      setLoading(false);
-    }
+    handleDvrAction('/api/dvr/entry/abort', 'Recording aborted', onStopped);
   };
 
   const getStatusChip = () => {
@@ -159,15 +183,15 @@ const DVREntryDialog: React.FC<DVREntryDialogProps> = ({
     };
     return (
       <Chip
-        label={entry.sched_status}
-        color={colors[entry.sched_status] || 'default'}
+        label={effectiveEntry.sched_status}
+        color={colors[effectiveEntry.sched_status] || 'default'}
         size="small"
       />
     );
   };
 
-  const downloadUrl = entry.filename
-    ? `/dvrfile/${entry.uuid}`
+  const downloadUrl = effectiveEntry.filename
+    ? `/dvrfile/${effectiveEntry.uuid}`
     : null;
 
   return (
@@ -175,10 +199,10 @@ const DVREntryDialog: React.FC<DVREntryDialogProps> = ({
       <DialogTitle>
         <Box display="flex" justifyContent="space-between" alignItems="flex-start">
           <Box sx={{ flexGrow: 1, pr: 2 }}>
-            <Typography variant="h6">{entry.disp_title}</Typography>
-            {entry.disp_subtitle && (
+            <Typography variant="h6">{effectiveEntry.disp_title}</Typography>
+            {effectiveEntry.disp_subtitle && (
               <Typography variant="subtitle1" color="text.secondary">
-                {entry.disp_subtitle}
+                {effectiveEntry.disp_subtitle}
               </Typography>
             )}
           </Box>
@@ -205,47 +229,69 @@ const DVREntryDialog: React.FC<DVREntryDialogProps> = ({
                 </TableRow>
                 <TableRow>
                   <TableCell><strong>Channel</strong></TableCell>
-                  <TableCell>{entry.channelname}</TableCell>
+                  <TableCell>{effectiveEntry.channelname || '—'}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell><strong>Start</strong></TableCell>
                   <TableCell>
-                    {entry.start_real ? new Date(entry.start_real * 1000).toLocaleString() : '—'}
+                    {effectiveEntry.start_real ? new Date(effectiveEntry.start_real * 1000).toLocaleString() : '—'}
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell><strong>Stop</strong></TableCell>
                   <TableCell>
-                    {entry.stop_real ? new Date(entry.stop_real * 1000).toLocaleString() : '—'}
+                    {effectiveEntry.stop_real ? new Date(effectiveEntry.stop_real * 1000).toLocaleString() : '—'}
                   </TableCell>
                 </TableRow>
-                {entry.filesize != null && (
+                {effectiveEntry.duration != null && (
+                  <TableRow>
+                    <TableCell><strong>Duration</strong></TableCell>
+                    <TableCell>{Math.round(effectiveEntry.duration / 60)} min</TableCell>
+                  </TableRow>
+                )}
+                {effectiveEntry.filesize != null && (
                   <TableRow>
                     <TableCell><strong>File Size</strong></TableCell>
-                    <TableCell>{formatBytes(entry.filesize)}</TableCell>
+                    <TableCell>{formatBytes(effectiveEntry.filesize)}</TableCell>
                   </TableRow>
                 )}
-                {entry.errors != null && entry.errors > 0 && (
+                {effectiveEntry.filename && (
+                  <TableRow>
+                    <TableCell><strong>File Name</strong></TableCell>
+                    <TableCell sx={{ wordBreak: 'break-all' }}>{effectiveEntry.filename}</TableCell>
+                  </TableRow>
+                )}
+                {effectiveEntry.errors != null && effectiveEntry.errors > 0 && (
                   <TableRow>
                     <TableCell><strong>Errors</strong></TableCell>
-                    <TableCell>{entry.errors}</TableCell>
+                    <TableCell>{effectiveEntry.errors}</TableCell>
                   </TableRow>
                 )}
-                {entry.comment && (
+                {effectiveEntry.comment && (
                   <TableRow>
                     <TableCell><strong>Comment</strong></TableCell>
-                    <TableCell>{entry.comment}</TableCell>
+                    <TableCell>{effectiveEntry.comment}</TableCell>
+                  </TableRow>
+                )}
+                {detailsLoading && (
+                  <TableRow>
+                    <TableCell colSpan={2}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <CircularProgress size={14} />
+                        <Typography variant="body2" color="text.secondary">Loading full details…</Typography>
+                      </Box>
+                    </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </Grid>
 
-          {(entry.disp_summary || entry.disp_description) && (
+          {(effectiveEntry.disp_summary || effectiveEntry.disp_description) && (
             <Grid item xs={12}>
               <Divider sx={{ my: 1 }} />
               <Typography variant="body2">
-                {entry.disp_summary || entry.disp_description}
+                {effectiveEntry.disp_summary || effectiveEntry.disp_description}
               </Typography>
             </Grid>
           )}
@@ -308,6 +354,47 @@ const DVREntryDialog: React.FC<DVREntryDialogProps> = ({
           >
             Cancel
           </Button>
+        )}
+        {!isUpcoming && !isRecording && (
+          <>
+            <Button
+              onClick={() => handleDvrAction('/api/dvr/entry/rerecord/toggle', 'Re-record toggled')}
+              disabled={loading}
+              variant="outlined"
+            >
+              Re-record
+            </Button>
+            {isCompleted && (
+              <Button
+                onClick={() => handleDvrAction('/api/dvr/entry/move/failed', 'Moved to failed')}
+                disabled={loading}
+                variant="outlined"
+                color="warning"
+              >
+                Move to failed
+              </Button>
+            )}
+            {isFailed && (
+              <Button
+                onClick={() => handleDvrAction('/api/dvr/entry/move/finished', 'Moved to finished')}
+                disabled={loading}
+                variant="outlined"
+                color="success"
+              >
+                Move to finished
+              </Button>
+            )}
+            {(isCompleted || isFailed) && (
+              <Button
+                onClick={() => handleDvrAction('/api/dvr/entry/remove', 'Recording removed from storage')}
+                disabled={loading}
+                variant="outlined"
+                color="warning"
+              >
+                Remove
+              </Button>
+            )}
+          </>
         )}
         {!isUpcoming && !isRecording && (
           <Button
