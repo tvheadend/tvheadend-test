@@ -37,7 +37,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: tvheadend/documentation
-          ref: master
           token: ${{ secrets.DOCS_REPO_TOKEN }}
           path: documentation
 
