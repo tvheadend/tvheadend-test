@@ -1,0 +1,59 @@
+name: Update Documentation Changelog
+
+on:
+  pull_request_target:
+    branches:
+      - master
+    types:
+      - closed
+  workflow_dispatch:
+
+jobs:
+  update-changelog:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out tvheadend repository
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install changelog dependencies
+        run: python3 -m pip install --upgrade pip pydriller
+
+      - name: Generate changelog markdown
+        run: python3 support/create_changelog.py -o /tmp/release-change-log.md -g "$GITHUB_WORKSPACE" -l -r
+
+      - name: Check out documentation repository
+        uses: actions/checkout@v4
+        with:
+          repository: tvheadend/documentation
+          ref: master
+          token: ${{ secrets.DOCS_REPO_TOKEN }}
+          path: documentation
+
+      - name: Update documentation changelog file
+        run: cp /tmp/release-change-log.md documentation/introduction/release-change-log.md
+
+      - name: Create documentation pull request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.DOCS_REPO_TOKEN }}
+          path: documentation
+          commit-message: "Update release/change log from tvheadend master"
+          title: "Update release/change log from tvheadend master"
+          body: |
+            This pull request updates `introduction/release-change-log.md`
+            using the latest output from `support/create_changelog.py` in
+            the tvheadend source repository after a PR merge to `master`.
+          branch: automated/update-release-change-log
+          delete-branch: true
