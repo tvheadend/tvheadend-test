@@ -7,19 +7,10 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Button,
   Card,
   CardContent,
   Toolbar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Collapse,
   ListItemIcon,
   Divider,
@@ -41,8 +32,7 @@ import {
   AutoAwesome as WizardIcon,
 } from '@mui/icons-material';
 import { 
-  loadLanguages, 
-  LanguageOption
+  loadLanguages
 } from '../utils/api';
 import AccessEntriesSection from './sections/AccessEntriesSection';
 import PasswordsSection from './sections/PasswordsSection';
@@ -68,7 +58,8 @@ import MemoryInfoSection from './sections/MemoryInfoSection';
 import TVAdaptersSection from './sections/TVAdaptersSection';
 import CAClientSection from './sections/CAClientSection';
 import BaseConfigSection from './sections/BaseConfigSection';
-// import BaseConfigSection from './sections/BaseConfigSection';
+import SatIPServerSection from './sections/SatIPServerSection';
+import WizardDialog from './dialogs/WizardDialog';
 
 interface ConfigSection {
   id: string;
@@ -106,24 +97,6 @@ function Configuration() {
   
   // Language selection states
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [wizardStep, setWizardStep] = useState(0);
-  const [wizardLanguage, setWizardLanguage] = useState('');
-  const [epgLang1, setEpgLang1] = useState('');
-  const [epgLang2, setEpgLang2] = useState('');
-  const [epgLang3, setEpgLang3] = useState('');
-
-  const [languages, setLanguages] = useState<LanguageOption[]>([]);
-
-  // Load dynamic data from APIs
-  const loadDynamicData = async () => {
-    try {
-      // Load languages - we can use any of the three language endpoints
-      const languageData = await loadLanguages();
-      setLanguages(languageData);
-    } catch (error) {
-      console.error('Failed to load configuration data:', error);
-    }
-  };
 
   const configSections: ConfigSection[] = [
     {
@@ -212,7 +185,9 @@ function Configuration() {
   useEffect(() => {
     loadServerInfo();
     loadConfiguration();
-    loadDynamicData();
+    loadLanguages().catch((error) => {
+      console.error('Failed to load configuration data:', error);
+    });
   }, []);
 
   const loadServerInfo = async () => {
@@ -313,21 +288,6 @@ function Configuration() {
 
   const startWizard = () => {
     setWizardOpen(true);
-    setWizardStep(0);
-  };
-
-  const nextWizardStep = () => {
-    if (wizardStep < 2) {
-      setWizardStep(wizardStep + 1);
-    } else {
-      setWizardOpen(false);
-    }
-  };
-
-  const previousWizardStep = () => {
-    if (wizardStep > 0) {
-      setWizardStep(wizardStep - 1);
-    }
   };
 
   const renderContent = () => {
@@ -340,14 +300,7 @@ function Configuration() {
           case 'imagecache':
             return <ImageCacheSection />;
           case 'satip-server':
-            return (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>SAT&gt;IP Server</Typography>
-                  <Typography variant="body2">SAT&gt;IP server configuration will be implemented here.</Typography>
-                </CardContent>
-              </Card>
-            );
+            return <SatIPServerSection />;
           default:
             return (
               <Card>
@@ -574,124 +527,10 @@ function Configuration() {
         {renderContent()}
       </Box>
 
-      {/* Setup Wizard Dialog */}
-      <Dialog open={wizardOpen} onClose={() => setWizardOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Setup Wizard - Step {wizardStep + 1} of 3
-        </DialogTitle>
-        <DialogContent>
-          {wizardStep === 0 && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Welcome to Tvheadend
-              </Typography>
-              <Typography paragraph>
-                This wizard will guide you through the initial setup of your Tvheadend server.
-                You can skip this wizard and configure everything manually later.
-              </Typography>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Interface Language</InputLabel>
-                <Select
-                  value={wizardLanguage}
-                  onChange={(e) => setWizardLanguage(e.target.value)}
-                  label="Interface Language"
-                >
-                  {languages.map((lang) => (
-                    <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
-                      {lang.val || lang.name || lang.identifier}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-          )}
-          
-          {wizardStep === 1 && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                EPG Language Priority
-              </Typography>
-              <Typography paragraph>
-                Select the preferred languages for Electronic Program Guide data.
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={4}>
-                  <FormControl fullWidth>
-                    <InputLabel>Language 1 (highest priority)</InputLabel>
-                    <Select
-                      value={epgLang1}
-                      onChange={(e) => setEpgLang1(e.target.value)}
-                      label="Language 1 (highest priority)"
-                    >
-                      {languages.map((lang) => (
-                        <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
-                          {lang.val || lang.name || lang.identifier}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={4}>
-                  <FormControl fullWidth>
-                    <InputLabel>Language 2</InputLabel>
-                    <Select
-                      value={epgLang2}
-                      onChange={(e) => setEpgLang2(e.target.value)}
-                      label="Language 2"
-                    >
-                      <MenuItem value="">None</MenuItem>
-                      {languages.map((lang) => (
-                        <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
-                          {lang.val || lang.name || lang.identifier}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={4}>
-                  <FormControl fullWidth>
-                    <InputLabel>Language 3</InputLabel>
-                    <Select
-                      value={epgLang3}
-                      onChange={(e) => setEpgLang3(e.target.value)}
-                      label="Language 3"
-                    >
-                      <MenuItem value="">None</MenuItem>
-                      {languages.map((lang) => (
-                        <MenuItem key={lang.identifier || lang.key || lang.id} value={lang.identifier || lang.key || lang.id}>
-                          {lang.val || lang.name || lang.identifier}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-          
-          {wizardStep === 2 && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Setup Complete
-              </Typography>
-              <Typography paragraph>
-                The basic setup is now complete. You can continue to configure
-                network sources, channels, and other settings using the Configuration menu.
-              </Typography>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setWizardOpen(false)}>Cancel</Button>
-          {wizardStep > 0 && (
-            <Button onClick={previousWizardStep}>Previous</Button>
-          )}
-          <Button onClick={nextWizardStep} variant="contained">
-            {wizardStep === 2 ? 'Finish' : 'Save & Next'}
-          </Button>
-          <Button startIcon={<HelpIcon />}>Help</Button>
-        </DialogActions>
-      </Dialog>
+      <WizardDialog
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+      />
     </Box>
   );
 }

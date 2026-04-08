@@ -187,7 +187,7 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <Router>
+      <Router basename="/modern">
         <AppContent />
       </Router>
     </ThemeProvider>
@@ -195,4 +195,3 @@ function App() {
 }
 
 export default App;
-/* Test comment for cache invalidation */

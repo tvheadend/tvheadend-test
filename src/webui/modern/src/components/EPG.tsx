@@ -21,16 +21,19 @@ import {
   Pagination,
   CircularProgress,
   Grid,
+  Tooltip,
+  IconButton,
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Tv as TvIcon,
   FiberManualRecord as RecordIcon,
-  Help as HelpIcon,
+  Info as InfoIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { 
-  loadChannels, 
-  loadChannelTags, 
+import {
+  loadChannels,
+  loadChannelTags,
   loadContentTypes,
   loadChannelCategories,
   getDurationOptions,
@@ -39,6 +42,9 @@ import {
   SelectOption
 } from '../utils/api';
 import WatchTVDialog from './dialogs/WatchTVDialog';
+import EPGEventDialog from './dialogs/EPGEventDialog';
+import CreateAutoRecDialog from './dialogs/CreateAutoRecDialog';
+import AddRecordingDialog from './dialogs/AddRecordingDialog';
 
 interface EPGEvent {
   eventId: string;
@@ -66,9 +72,25 @@ interface EPGEvent {
   rating?: string;
   copyrightYear?: number;
   serieslinkUri?: string;
-  scheduled?: boolean;
-  recording?: boolean;
   keyword?: string[];
+  credits?: Record<string, string[]>;
+}
+
+function formatDateTime(timestamp: number): string {
+  return new Date(timestamp * 1000).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatDuration(seconds: number): string {
+  if (!seconds) return '—';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
 }
 
 function EPG() {
@@ -90,9 +112,13 @@ function EPG() {
 
   // Dialog states
   const [selectedEvent, setSelectedEvent] = useState<EPGEvent | null>(null);
+  const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [watchTVDialogOpen, setWatchTVDialogOpen] = useState(false);
+  const [autoRecDialogOpen, setAutoRecDialogOpen] = useState(false);
+  const [addRecordingDialogOpen, setAddRecordingDialogOpen] = useState(false);
+  const [watchTVChannel, setWatchTVChannel] = useState<string | undefined>();
 
-  // Data states
+  // Filter data
   const [channels, setChannels] = useState<ChannelOption[]>([]);
   const [tags, setTags] = useState<TagOption[]>([]);
   const [contentTypes, setContentTypes] = useState<SelectOption[]>([]);
@@ -101,20 +127,18 @@ function EPG() {
 
   const loadDynamicData = async () => {
     try {
-      // Load all dynamic EPG filter data in parallel
       const [channelData, tagData, contentTypeData, categoryData] = await Promise.all([
         loadChannels({ numbers: true, sources: false }),
         loadChannelTags(),
-        loadContentTypes(false), // Load basic content types
+        loadContentTypes(false),
         loadChannelCategories(),
       ]);
-      
       setChannels(channelData);
       setTags(tagData);
       setContentTypes(contentTypeData);
       setCategories(categoryData);
     } catch (error) {
-      console.error('Failed to load EPG dynamic data:', error);
+      console.error('Failed to load EPG filter data:', error);
     }
   };
 
@@ -125,7 +149,7 @@ function EPG() {
         start: (page * rowsPerPage).toString(),
         limit: rowsPerPage.toString(),
       });
-      
+
       if (searchTitle) params.append('title', searchTitle);
       if (selectedChannel) params.append('channel', selectedChannel);
       if (selectedTag) params.append('channeltag', selectedTag);
@@ -147,19 +171,8 @@ function EPG() {
     }
   }, [page, rowsPerPage, searchTitle, selectedChannel, selectedTag, contentType, category, duration, newOnly, fulltext]);
 
-  // Load initial data
-  useEffect(() => {
-    loadDynamicData();
-  }, []);
-
-  // Load events when filters change
-  useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
-
-  useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
+  useEffect(() => { loadDynamicData(); }, []);
+  useEffect(() => { loadEvents(); }, [loadEvents]);
 
   const handleResetFilters = () => {
     setSearchTitle('');
@@ -168,45 +181,42 @@ function EPG() {
     setContentType('');
     setCategory('');
     setDuration('');
-    setNewOnly(false); 
+    setNewOnly(false);
     setFulltext(false);
     setPage(0);
   };
 
+  const handleRowClick = (event: EPGEvent) => {
+    setSelectedEvent(event);
+    setEventDialogOpen(true);
+  };
+
   const handleWatchTV = (event?: EPGEvent) => {
-    if (event) {
-      setSelectedEvent(event);
-    }
+    setWatchTVChannel(event?.channelUuid);
+    if (event) setSelectedEvent(event);
     setWatchTVDialogOpen(true);
   };
 
-  const handleCreateAutoRec = (event: EPGEvent) => {
+  const handleOpenAddRecording = (event: EPGEvent) => {
     setSelectedEvent(event);
-    // Dialog would open here
-    console.log('Create AutoRec:', event.title);
+    setAddRecordingDialogOpen(true);
   };
 
-  const handleProgramDetails = (event: EPGEvent) => {
-    setSelectedEvent(event);
-    // Dialog would open here
-    console.log('Program Details:', event.title);
-  };
-
-  const formatDateTime = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleString();
-  };
-
-  const formatDuration = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}:${minutes.toString().padStart(2, '0')}`;
-  };
-
-  const getRecordingStatus = (event: EPGEvent) => {
-    if (event.recording) return { label: 'Recording', color: 'error' as const };
-    if (event.scheduled) return { label: 'Scheduled', color: 'warning' as const };
-    if (event.dvrState) return { label: event.dvrState, color: 'primary' as const };
-    return null;
+  const getDVRChip = (event: EPGEvent) => {
+    if (!event.dvrState) return null;
+    const colors: Record<string, 'default' | 'primary' | 'success' | 'error' | 'warning'> = {
+      scheduled: 'primary',
+      recording: 'error',
+      completed: 'success',
+      missed: 'warning',
+    };
+    return (
+      <Chip
+        label={event.dvrState}
+        size="small"
+        color={colors[event.dvrState] || 'default'}
+      />
+    );
   };
 
   const totalPages = Math.ceil(totalEvents / rowsPerPage);
@@ -227,21 +237,16 @@ function EPG() {
               label="Search title"
               value={searchTitle}
               onChange={(e) => setSearchTitle(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && loadEvents()}
             />
           </Grid>
           <Grid item xs={12} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Channel</InputLabel>
-              <Select
-                value={selectedChannel}
-                onChange={(e) => setSelectedChannel(e.target.value)}
-                label="Channel"
-              >
-                <MenuItem value="">All</MenuItem>
-                {channels.map((channel) => (
-                  <MenuItem key={channel.uuid} value={channel.uuid}>
-                    {channel.name}
-                  </MenuItem>
+              <Select value={selectedChannel} onChange={(e) => setSelectedChannel(e.target.value)} label="Channel">
+                <MenuItem value="">All Channels</MenuItem>
+                {channels.map((ch) => (
+                  <MenuItem key={ch.uuid} value={ch.uuid}>{ch.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -249,16 +254,10 @@ function EPG() {
           <Grid item xs={12} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Tag</InputLabel>
-              <Select
-                value={selectedTag}
-                onChange={(e) => setSelectedTag(e.target.value)}
-                label="Tag"
-              >
-                <MenuItem value="">All</MenuItem>
+              <Select value={selectedTag} onChange={(e) => setSelectedTag(e.target.value)} label="Tag">
+                <MenuItem value="">All Tags</MenuItem>
                 {tags.map((tag) => (
-                  <MenuItem key={tag.uuid} value={tag.uuid}>
-                    {tag.name}
-                  </MenuItem>
+                  <MenuItem key={tag.uuid} value={tag.uuid}>{tag.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -266,33 +265,10 @@ function EPG() {
           <Grid item xs={12} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Content Type</InputLabel>
-              <Select
-                value={contentType}
-                onChange={(e) => setContentType(e.target.value)}
-                label="Content Type"
-              >
-                <MenuItem value="">All</MenuItem>
+              <Select value={contentType} onChange={(e) => setContentType(e.target.value)} label="Content Type">
+                <MenuItem value="">All Types</MenuItem>
                 {contentTypes.map((type) => (
-                  <MenuItem key={type.key} value={type.key.toString()}>
-                    {type.val}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Category</InputLabel>
-              <Select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                label="Category"
-              >
-                <MenuItem value="">All</MenuItem>
-                {categories.map((cat) => (
-                  <MenuItem key={cat.key} value={cat.key.toString()}>
-                    {cat.val}
-                  </MenuItem>
+                  <MenuItem key={type.key} value={type.key.toString()}>{type.val}</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -300,65 +276,43 @@ function EPG() {
           <Grid item xs={12} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Duration</InputLabel>
-              <Select
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                label="Duration"
-              >
+              <Select value={duration} onChange={(e) => setDuration(e.target.value)} label="Duration">
                 {durations.map((dur) => (
-                  <MenuItem key={dur.key} value={dur.key.toString()}>
-                    {dur.val}
-                  </MenuItem>
+                  <MenuItem key={dur.key} value={dur.key.toString()}>{dur.val}</MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={3}>
-            <Box display="flex" gap={1} alignItems="center">
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={newOnly}
-                    onChange={(e) => setNewOnly(e.target.checked)}
-                  />
-                }
-                label="New only"
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={fulltext}
-                    onChange={(e) => setFulltext(e.target.checked)}
-                  />
-                }
-                label="Fulltext"
-              />
-            </Box>
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Category</InputLabel>
+              <Select value={category} onChange={(e) => setCategory(e.target.value)} label="Category">
+                <MenuItem value="">All</MenuItem>
+                {categories.map((cat) => (
+                  <MenuItem key={cat.key} value={cat.key.toString()}>{cat.val}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
         </Grid>
-        
-        <Box mt={2} display="flex" gap={1}>
-          <Button
-            startIcon={<SearchIcon />}
-            variant="contained"
-            size="small"
-            onClick={loadEvents}
-          >
+
+        <Box mt={2} display="flex" gap={1} alignItems="center" flexWrap="wrap">
+          <FormControlLabel
+            control={<Checkbox checked={newOnly} onChange={(e) => setNewOnly(e.target.checked)} size="small" />}
+            label="New only"
+          />
+          <FormControlLabel
+            control={<Checkbox checked={fulltext} onChange={(e) => setFulltext(e.target.checked)} size="small" />}
+            label="Fulltext"
+          />
+          <Box flexGrow={1} />
+          <Button startIcon={<SearchIcon />} variant="contained" size="small" onClick={loadEvents}>
             Search
           </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleResetFilters}
-          >
-            Reset All
+          <Button variant="outlined" size="small" onClick={handleResetFilters}>
+            Reset
           </Button>
-          <Button
-            startIcon={<TvIcon />}
-            variant="outlined"
-            size="small"
-            onClick={() => handleWatchTV(selectedEvent || undefined)}
-          >
+          <Button startIcon={<TvIcon />} variant="outlined" size="small" onClick={() => handleWatchTV()}>
             Watch TV
           </Button>
           <Button
@@ -366,153 +320,124 @@ function EPG() {
             variant="outlined"
             size="small"
             disabled={!selectedEvent}
-            onClick={() => selectedEvent && handleCreateAutoRec(selectedEvent)}
+            onClick={() => selectedEvent && setAutoRecDialogOpen(true)}
           >
-            Create AutoRec
+            Auto Record
           </Button>
-          <Button
-            startIcon={<HelpIcon />}
-            variant="outlined"
-            size="small"
-          >
-            Help
-          </Button>
+          <Tooltip title="Refresh">
+            <IconButton size="small" onClick={loadEvents}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
         </Box>
+
+        {totalEvents > 0 && (
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            {totalEvents} events found
+          </Typography>
+        )}
       </Paper>
 
       {/* Events Table */}
       <Paper>
         <TableContainer>
-          <Table>
+          <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Details</TableCell>
-                <TableCell>Actions</TableCell>
-                <TableCell>Progress</TableCell>
-                <TableCell>Content Icons</TableCell>
+                <TableCell sx={{ width: 40 }}></TableCell>
                 <TableCell>Title</TableCell>
-                <TableCell>Extra text</TableCell>
-                <TableCell>Episode</TableCell>
-                <TableCell>Start Time</TableCell>
-                <TableCell>Duration</TableCell>
+                <TableCell>Subtitle</TableCell>
+                <TableCell sx={{ width: 140 }}>Start</TableCell>
+                <TableCell sx={{ width: 80 }}>Duration</TableCell>
                 <TableCell>Channel</TableCell>
-                <TableCell>Stars</TableCell>
-                <TableCell>Rating</TableCell>
-                <TableCell>Age</TableCell>
-                <TableCell>Content Type</TableCell>
+                <TableCell sx={{ width: 60 }}>Stars</TableCell>
+                <TableCell sx={{ width: 60 }}>Age</TableCell>
+                <TableCell sx={{ width: 100 }}>Status</TableCell>
+                <TableCell sx={{ width: 100 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={14} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
               ) : events.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={14} align="center" sx={{ py: 4 }}>
-                    <Typography color="text.secondary">
-                      No events found
-                    </Typography>
+                  <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                    <Typography color="text.secondary">No events found</Typography>
                   </TableCell>
                 </TableRow>
-              ) : (
-                events.map((event) => {
-                  const status = getRecordingStatus(event);
-                  return (
-                    <TableRow 
-                      key={event.eventId} 
-                      hover
-                      onClick={() => handleProgramDetails(event)}
-                      sx={{ cursor: 'pointer' }}
-                    >
-                      <TableCell>
-                        <Button size="small">Details</Button>
-                      </TableCell>
-                      <TableCell>
-                        <Box display="flex" gap={0.5}>
-                          <Button size="small" onClick={(e) => { e.stopPropagation(); handleWatchTV(event); }}>
-                            Watch
-                          </Button>
-                          <Button size="small" onClick={(e) => { e.stopPropagation(); handleCreateAutoRec(event); }}>
-                            Record
-                          </Button>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        {/* Progress indicator would go here */}
-                      </TableCell>
-                      <TableCell>
-                        {status && (
-                          <Chip
-                            label={status.label}
-                            size="small"
-                            color={status.color}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="medium">
-                          {event.title}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {event.subtitle}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {event.episode}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {formatDateTime(event.start)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {formatDuration(event.duration)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {event.channelName}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        {event.stars && (
-                          <Typography variant="body2">
-                            {'★'.repeat(event.stars)}
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {event.rating}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {event.ageRating}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {event.category?.join(', ')}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
+              ) : events.map((event) => (
+                <TableRow
+                  key={event.eventId}
+                  hover
+                  onClick={() => handleRowClick(event)}
+                  sx={{ cursor: 'pointer' }}
+                  selected={selectedEvent?.eventId === event.eventId}
+                >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Tooltip title="Details">
+                      <IconButton size="small" onClick={() => handleRowClick(event)}>
+                        <InfoIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight="medium" noWrap sx={{ maxWidth: 200 }}>
+                      {event.title}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 150 }}>
+                      {event.subtitle}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{formatDateTime(event.start)}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{formatDuration(event.duration)}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{event.channelName}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    {event.stars != null && (
+                      <Typography variant="body2" title={`${event.stars}/5`}>
+                        {'★'.repeat(event.stars)}{'☆'.repeat(5 - event.stars)}
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {event.ageRating != null && event.ageRating > 0 && (
+                      <Typography variant="body2">{event.ageRating}+</Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>{getDVRChip(event)}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Box display="flex" gap={0.5}>
+                      <Tooltip title="Watch TV">
+                        <IconButton size="small" onClick={() => handleWatchTV(event)}>
+                          <TvIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      {!event.dvrState && (
+                        <Tooltip title="Record">
+                          <IconButton size="small" color="error" onClick={() => handleOpenAddRecording(event)}>
+                            <RecordIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </TableContainer>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <Box display="flex" justifyContent="center" p={2}>
             <Pagination
@@ -525,12 +450,48 @@ function EPG() {
         )}
       </Paper>
 
+      {/* Event Details Dialog */}
+      <EPGEventDialog
+        open={eventDialogOpen}
+        onClose={() => setEventDialogOpen(false)}
+        event={selectedEvent}
+        onWatchTV={(event) => {
+          setEventDialogOpen(false);
+          if (event.channelUuid) handleWatchTV(event as EPGEvent);
+        }}
+        onAddRecording={(event) => {
+          setEventDialogOpen(false);
+          setSelectedEvent(event as EPGEvent);
+          setAddRecordingDialogOpen(true);
+        }}
+        onCancelRecording={() => {
+          loadEvents();
+          setEventDialogOpen(false);
+        }}
+      />
+
       {/* Watch TV Dialog */}
       <WatchTVDialog
         open={watchTVDialogOpen}
         onClose={() => setWatchTVDialogOpen(false)}
-        channelUuid={selectedEvent?.channelUuid}
+        channelUuid={watchTVChannel}
         title={selectedEvent?.title}
+      />
+
+      {/* Auto Record Dialog */}
+      <CreateAutoRecDialog
+        open={autoRecDialogOpen}
+        onClose={() => setAutoRecDialogOpen(false)}
+        eventId={selectedEvent?.eventId}
+        title={selectedEvent?.title}
+        channel={selectedEvent?.channelUuid}
+      />
+
+      <AddRecordingDialog
+        open={addRecordingDialogOpen}
+        onClose={() => setAddRecordingDialogOpen(false)}
+        event={selectedEvent}
+        onScheduled={loadEvents}
       />
     </Box>
   );

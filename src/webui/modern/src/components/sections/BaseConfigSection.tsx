@@ -3,7 +3,7 @@ import {
   Card,
   CardContent,
   Typography,
-  Grid,  
+  Grid,
   TextField,
   FormControl,
   InputLabel,
@@ -31,15 +31,17 @@ interface LanguageItem {
 }
 
 interface BaseConfig {
+  uuid?: string;
   servername: string;
   server_name: string;
   lang: string;
   langui: string;
+  language_ui?: string;
   theme_ui: string;
   uilevel: number;
   uilevel_nochange: boolean;
   page_size_ui: number;
-  language: string[];
+  language: string[] | string;
 }
 
 const BaseConfigSection: React.FC = () => {
@@ -54,12 +56,13 @@ const BaseConfigSection: React.FC = () => {
     page_size_ui: 50,
     language: []
   });
-  
+
   const [availableLanguages, setAvailableLanguages] = useState<LanguageItem[]>([]);
-  const [selectedLanguages, setSelectedLanguages] = useState<LanguageItem[]>([]);
+  const [selectedLanguageIds, setSelectedLanguageIds] = useState<string[]>([]);
+  const [activeAvailableLanguageId, setActiveAvailableLanguageId] = useState<string>('');
+  const [activeSelectedLanguageId, setActiveSelectedLanguageId] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
-  // Load languages
   const loadLanguages = async () => {
     try {
       const response = await fetch('/api/language/list');
@@ -82,19 +85,61 @@ const BaseConfigSection: React.FC = () => {
     }
   };
 
+  const loadConfig = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/config/load', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meta: 1 }),
+      });
+      const data = await response.json();
+      if (data.entries && data.entries[0]) {
+        const cfg = data.entries[0];
+        setConfig((prev) => ({
+          ...prev,
+          ...cfg,
+          servername: cfg.servername || cfg.server_name || '',
+          server_name: cfg.server_name || cfg.servername || '',
+          lang: cfg.lang || 'en',
+          langui: cfg.langui || cfg.language_ui || 'en',
+          language_ui: cfg.language_ui || cfg.langui || 'en',
+          theme_ui: cfg.theme_ui || 'blue',
+          uilevel: cfg.uilevel ?? 2,
+          uilevel_nochange: !!cfg.uilevel_nochange,
+          page_size_ui: cfg.page_size_ui || 50,
+        }));
+        const langs = Array.isArray(cfg.language)
+          ? cfg.language
+          : typeof cfg.language === 'string' && cfg.language.length > 0
+            ? cfg.language.split(',').map((l: string) => l.trim()).filter(Boolean)
+            : [];
+        setSelectedLanguageIds(langs);
+      }
+    } catch (error) {
+      console.error('Failed to load base configuration:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadLanguages();
+    loadConfig();
   }, []);
 
   const handleSave = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/config', {
+      const response = await fetch('/api/config/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...config,
-          language: selectedLanguages.map(lang => lang.identifier)
+          servername: config.servername || config.server_name || '',
+          server_name: config.servername || config.server_name || '',
+          language_ui: config.langui || config.language_ui || 'en',
+          language: selectedLanguageIds,
         }),
       });
       if (response.ok) {
@@ -118,17 +163,28 @@ const BaseConfigSection: React.FC = () => {
 
   const handleLanguageMove = (language: LanguageItem, toSelected: boolean) => {
     if (toSelected) {
-      if (!selectedLanguages.find(l => l.identifier === language.identifier)) {
-        setSelectedLanguages([...selectedLanguages, language]);
+      if (!selectedLanguageIds.includes(language.identifier)) {
+        setSelectedLanguageIds([...selectedLanguageIds, language.identifier]);
       }
     } else {
-      setSelectedLanguages(selectedLanguages.filter(l => l.identifier !== language.identifier));
+      setSelectedLanguageIds(selectedLanguageIds.filter(id => id !== language.identifier));
     }
   };
 
+  const moveLanguage = (direction: 'up' | 'down') => {
+    if (!activeSelectedLanguageId) return;
+    const currentIndex = selectedLanguageIds.indexOf(activeSelectedLanguageId);
+    if (currentIndex < 0) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= selectedLanguageIds.length) return;
+    const next = [...selectedLanguageIds];
+    [next[currentIndex], next[targetIndex]] = [next[targetIndex], next[currentIndex]];
+    setSelectedLanguageIds(next);
+  };
+
   const getAvailableForSelection = () => {
-    return availableLanguages.filter(lang => 
-      !selectedLanguages.find(selected => selected.identifier === lang.identifier)
+    return availableLanguages.filter(lang =>
+      !selectedLanguageIds.includes(lang.identifier)
     );
   };
 
@@ -161,13 +217,13 @@ const BaseConfigSection: React.FC = () => {
           <Grid item xs={12}>
             <Typography variant="h6" gutterBottom>Server Settings</Typography>
           </Grid>
-          
+
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
               label="Server Name"
               value={config.servername || config.server_name || ''}
-              onChange={(e) => setConfig({...config, servername: e.target.value, server_name: e.target.value})}
+              onChange={(e) => setConfig({ ...config, servername: e.target.value, server_name: e.target.value })}
               helperText="Name to display in the UI and HTSP"
             />
           </Grid>
@@ -181,7 +237,7 @@ const BaseConfigSection: React.FC = () => {
               <InputLabel>Default Language</InputLabel>
               <Select
                 value={config.lang || 'en'}
-                onChange={(e) => setConfig({...config, lang: e.target.value})}
+                onChange={(e) => setConfig({ ...config, lang: e.target.value })}
                 label="Default Language"
               >
                 {availableLanguages.map((lang) => (
@@ -198,7 +254,7 @@ const BaseConfigSection: React.FC = () => {
               <InputLabel>Web Interface Language</InputLabel>
               <Select
                 value={config.langui || 'en'}
-                onChange={(e) => setConfig({...config, langui: e.target.value})}
+                onChange={(e) => setConfig({ ...config, langui: e.target.value, language_ui: e.target.value })}
                 label="Web Interface Language"
               >
                 {availableLanguages.map((lang) => (
@@ -215,7 +271,7 @@ const BaseConfigSection: React.FC = () => {
               <InputLabel>Theme</InputLabel>
               <Select
                 value={config.theme_ui || 'blue'}
-                onChange={(e) => setConfig({...config, theme_ui: e.target.value})}
+                onChange={(e) => setConfig({ ...config, theme_ui: e.target.value })}
                 label="Theme"
               >
                 <MenuItem value="blue">Blue</MenuItem>
@@ -230,7 +286,7 @@ const BaseConfigSection: React.FC = () => {
               <InputLabel>UI Level</InputLabel>
               <Select
                 value={config.uilevel || 2}
-                onChange={(e) => setConfig({...config, uilevel: Number(e.target.value)})}
+                onChange={(e) => setConfig({ ...config, uilevel: Number(e.target.value) })}
                 label="UI Level"
               >
                 <MenuItem value={0}>Basic</MenuItem>
@@ -245,7 +301,7 @@ const BaseConfigSection: React.FC = () => {
               <InputLabel>Page Size</InputLabel>
               <Select
                 value={config.page_size_ui || 50}
-                onChange={(e) => setConfig({...config, page_size_ui: Number(e.target.value)})}
+                onChange={(e) => setConfig({ ...config, page_size_ui: Number(e.target.value) })}
                 label="Page Size"
               >
                 <MenuItem value={25}>25</MenuItem>
@@ -262,7 +318,7 @@ const BaseConfigSection: React.FC = () => {
               control={
                 <Checkbox
                   checked={config.uilevel_nochange || false}
-                  onChange={(e) => setConfig({...config, uilevel_nochange: e.target.checked})}
+                  onChange={(e) => setConfig({ ...config, uilevel_nochange: e.target.checked })}
                 />
               }
               label="UI level change allowed"
@@ -284,7 +340,11 @@ const BaseConfigSection: React.FC = () => {
                   <List dense>
                     {getAvailableForSelection().map((lang) => (
                       <ListItem key={lang.identifier} disablePadding>
-                        <ListItemButton onClick={() => handleLanguageMove(lang, true)}>
+                        <ListItemButton
+                          selected={activeAvailableLanguageId === lang.identifier}
+                          onClick={() => setActiveAvailableLanguageId(lang.identifier)}
+                          onDoubleClick={() => handleLanguageMove(lang, true)}
+                        >
                           <ListItemText primary={lang.val} secondary={lang.identifier.toUpperCase()} />
                         </ListItemButton>
                       </ListItem>
@@ -292,28 +352,59 @@ const BaseConfigSection: React.FC = () => {
                   </List>
                 </Paper>
               </Grid>
-              
+
               <Grid item xs={2} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1 }}>
-                <Button variant="outlined" size="small">→</Button>
-                <Button variant="outlined" size="small">←</Button>
-                <Button variant="outlined" size="small">↑</Button>
-                <Button variant="outlined" size="small">↓</Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  disabled={!activeAvailableLanguageId}
+                  onClick={() => {
+                    const lang = availableLanguages.find((l) => l.identifier === activeAvailableLanguageId);
+                    if (lang) handleLanguageMove(lang, true);
+                  }}
+                >
+                  →
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  disabled={!activeSelectedLanguageId}
+                  onClick={() => {
+                    const lang = availableLanguages.find((l) => l.identifier === activeSelectedLanguageId) || {
+                      identifier: activeSelectedLanguageId,
+                      val: activeSelectedLanguageId
+                    };
+                    handleLanguageMove(lang, false);
+                  }}
+                >
+                  ←
+                </Button>
+                <Button variant="outlined" size="small" disabled={!activeSelectedLanguageId} onClick={() => moveLanguage('up')}>↑</Button>
+                <Button variant="outlined" size="small" disabled={!activeSelectedLanguageId} onClick={() => moveLanguage('down')}>↓</Button>
               </Grid>
-              
+
               <Grid item xs={5}>
                 <Typography variant="subtitle1">Selected Languages</Typography>
                 <Paper sx={{ height: 200, overflow: 'auto' }}>
                   <List dense>
-                    {selectedLanguages.map((lang, index) => (
-                      <ListItem key={lang.identifier} disablePadding>
-                        <ListItemButton onClick={() => handleLanguageMove(lang, false)}>
-                          <ListItemText 
-                            primary={`${index + 1}. ${lang.val}`} 
-                            secondary={lang.identifier.toUpperCase()} 
-                          />
-                        </ListItemButton>
-                      </ListItem>
-                    ))}
+                    {selectedLanguageIds.map((langId, index) => {
+                      const lang = availableLanguages.find((entry) => entry.identifier === langId);
+                      const label = lang?.val || langId;
+                      return (
+                        <ListItem key={langId} disablePadding>
+                          <ListItemButton
+                            selected={activeSelectedLanguageId === langId}
+                            onClick={() => setActiveSelectedLanguageId(langId)}
+                            onDoubleClick={() => setSelectedLanguageIds(selectedLanguageIds.filter((id) => id !== langId))}
+                          >
+                            <ListItemText
+                              primary={`${index + 1}. ${label}`}
+                              secondary={langId.toUpperCase()}
+                            />
+                          </ListItemButton>
+                        </ListItem>
+                      );
+                    })}
                   </List>
                 </Paper>
               </Grid>
