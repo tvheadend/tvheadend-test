@@ -23,7 +23,7 @@ const AccessEntriesSection: React.FC = () => {
     <ConfigDataGrid
       title="Access Entries"
       titleSingular="Access Entry"
-      url="access/entry"
+      url="access/entry/grid"
       columns={columns}
       canAdd={true}
       canEdit={true}

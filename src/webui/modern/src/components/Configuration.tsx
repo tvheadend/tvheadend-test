@@ -44,6 +44,7 @@ import {
   loadLanguages, 
   LanguageOption
 } from '../utils/api';
+import { useHelp } from '../contexts/HelpContext';
 import AccessEntriesSection from './sections/AccessEntriesSection';
 import PasswordsSection from './sections/PasswordsSection';
 import IPBlockingSection from './sections/IPBlockingSection';
@@ -89,6 +90,7 @@ function Configuration() {
   const [selectedSection, setSelectedSection] = useState('general');
   const [selectedSubsection, setSelectedSubsection] = useState('base');
   const [expandedSections, setExpandedSections] = useState<string[]>(['general']);
+  const { showHelp } = useHelp();
   
   // Server data
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
@@ -520,6 +522,7 @@ function Configuration() {
             variant="outlined"
             size="small"
             sx={{ mb: 1 }}
+            onClick={() => showHelp('introduction')}
           >
             Help
           </Button>
@@ -689,7 +692,12 @@ function Configuration() {
           <Button onClick={nextWizardStep} variant="contained">
             {wizardStep === 2 ? 'Finish' : 'Save & Next'}
           </Button>
-          <Button startIcon={<HelpIcon />}>Help</Button>
+          <Button 
+            startIcon={<HelpIcon />}
+            onClick={() => showHelp('wizard/hello')}
+          >
+            Help
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

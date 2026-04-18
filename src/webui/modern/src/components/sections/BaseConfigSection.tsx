@@ -23,7 +23,9 @@ import {
 import {
   PlayArrow as WizardIcon,
   Save as SaveIcon,
+  Help as HelpIcon,
 } from '@mui/icons-material';
+import { useHelp } from '../../contexts/HelpContext';
 
 interface LanguageItem {
   identifier: string;
@@ -58,6 +60,7 @@ const BaseConfigSection: React.FC = () => {
   const [availableLanguages, setAvailableLanguages] = useState<LanguageItem[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<LanguageItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const { showClassHelp } = useHelp();
 
   // Load languages
   const loadLanguages = async () => {
@@ -151,8 +154,16 @@ const BaseConfigSection: React.FC = () => {
               variant="contained"
               onClick={handleSave}
               disabled={loading}
+              sx={{ mr: 1 }}
             >
               Save Configuration
+            </Button>
+            <Button
+              startIcon={<HelpIcon />}
+              variant="outlined"
+              onClick={() => showClassHelp('config')}
+            >
+              Help
             </Button>
           </Box>
         </Box>
