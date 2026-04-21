@@ -30,9 +30,41 @@ tvheadend.cookieProvider = new Ext.state.CookieProvider({
 /* State Provider */
 Ext.state.Manager.setProvider(tvheadend.cookieProvider);
 
+// Modern utility methods
 tvheadend.regexEscape = function(s) {
     return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-}
+};
+
+// Improved browser detection and compatibility
+tvheadend.browser = {
+    isModern: function() {
+        return !Ext.isIE6 && !Ext.isIE7 && !Ext.isIE8;
+    },
+    supportsHTML5: function() {
+        return !!(document.createElement('canvas').getContext);
+    },
+    supportsCSS3: function() {
+        var div = document.createElement('div');
+        return 'borderRadius' in div.style || 'webkitBorderRadius' in div.style || 
+               'mozBorderRadius' in div.style;
+    }
+};
+
+// Enhanced error handling
+tvheadend.error = function(message, title) {
+    title = title || _('Error');
+    if (tvheadend.browser.isModern()) {
+        Ext.MessageBox.show({
+            title: title,
+            msg: message,
+            buttons: Ext.MessageBox.OK,
+            icon: Ext.MessageBox.ERROR,
+            minWidth: 400
+        });
+    } else {
+        alert(title + ': ' + message);
+    }
+};
 
 tvheadend.fromCSV = function(s) {
     var a = s.split(',');

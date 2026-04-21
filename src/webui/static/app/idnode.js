@@ -2136,28 +2136,67 @@ tvheadend.idnode_grid = function(panel, conf)
                               '{text} ({[values.rs.length]} {[values.rs.length > 1 ? "' +
                               _('Items') + '" : "' + _('Item') + '"]})'
             }),
-            keys: {
+            // Modern keyboard shortcuts with better accessibility
+            keys: [{
                 key: 'a',
                 ctrl: true,
                 stopEvent: true,
                 handler: function() {
-                    grid.getSelectionModel().selectAll();
+                    try {
+                        grid.getSelectionModel().selectAll();
+                    } catch (e) {
+                        console.warn('Select all failed:', e);
+                    }
                 }
-            },
+            }, {
+                key: Ext.EventObject.DELETE,
+                stopEvent: true,
+                handler: function() {
+                    if (abuttons.del && !abuttons.del.disabled) {
+                        abuttons.del.handler();
+                    }
+                }
+            }],
             tbar: buttons,
             bbar: page
         };
-        grid = conf.readonly ? new Ext.grid.GridPanel(gconf) :
-                               new Ext.grid.EditorGridPanel(gconf);
+        
+        // Create grid with improved error handling
+        try {
+            grid = conf.readonly ? new Ext.grid.GridPanel(gconf) :
+                                   new Ext.grid.EditorGridPanel(gconf);
+        } catch (e) {
+            console.error('Failed to create grid:', e);
+            if (tvheadend.error) {
+                tvheadend.error('Failed to initialize grid component');
+            }
+            return;
+        }
+        
+        // Modern event handling with error protection
         grid.on('filterupdate', function() {
-            page.changePage(0);
+            try {
+                page.changePage(0);
+            } catch (e) {
+                console.warn('Filter update failed:', e);
+            }
         });
 
-        if (conf.beforeedit)
+        if (conf.beforeedit) {
             grid.on('beforeedit', conf.beforeedit);
+        }
 
-        if (conf.viewready)
+        if (conf.viewready) {
             grid.on('viewready', conf.viewready);
+        }
+
+        // Add error handling for grid operations
+        grid.on('exception', function(proxy, type, action, options, response, arg) {
+            console.error('Grid operation failed:', {type: type, action: action, response: response});
+            if (tvheadend.error) {
+                tvheadend.error('Grid operation failed: ' + (response.statusText || 'Unknown error'));
+            }
+        });
 
         grid.abuttons = abuttons;
 
